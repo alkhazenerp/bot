@@ -1,0 +1,54 @@
+name: Ibad Al-Rahman APK
+
+on:
+  push:
+    paths:
+      - "IbadAlRahman/**"
+      - ".github/workflows/android.yml"
+  pull_request:
+    paths:
+      - "IbadAlRahman/**"
+  workflow_dispatch:
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: IbadAlRahman
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: zulu
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit tests (prayer-time engine)
+        run: ./gradlew --stacktrace testDebugUnitTest
+
+      - name: Build APKs
+        run: ./gradlew --stacktrace assembleDebug assembleRelease
+
+      - name: Upload APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: IbadAlRahman-apk
+          path: |
+            IbadAlRahman/app/build/outputs/apk/debug/*.apk
+            IbadAlRahman/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: IbadAlRahman/app/build/reports/
