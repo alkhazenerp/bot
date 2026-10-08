@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 108 108">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="34%" r="75%">
+      <stop offset="0" stop-color="#1F7A60"/>
+      <stop offset="0.45" stop-color="#0C4436"/>
+      <stop offset="1" stop-color="#041915"/>
+    </radialGradient>
+    <radialGradient id="halo" cx="54" cy="30" r="30" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFE38A" stop-opacity="0.55"/>
+      <stop offset="0.45" stop-color="#F5C542" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#F5C542" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="stone" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#E9DDBF"/>
+      <stop offset="0.28" stop-color="#FFFDF6"/>
+      <stop offset="0.62" stop-color="#E4D5AE"/>
+      <stop offset="1" stop-color="#8F7B52"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#B07A16"/>
+      <stop offset="0.25" stop-color="#FFF0A3"/>
+      <stop offset="0.55" stop-color="#F2BE3C"/>
+      <stop offset="1" stop-color="#7A4E08"/>
+    </linearGradient>
+    <linearGradient id="goldV" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#FFF4B8"/>
+      <stop offset="0.5" stop-color="#F0B93A"/>
+      <stop offset="1" stop-color="#8A5A0B"/>
+    </linearGradient>
+    <radialGradient id="dome" cx="38%" cy="30%" r="80%">
+      <stop offset="0" stop-color="#FFF8D2"/>
+      <stop offset="0.35" stop-color="#F6CB55"/>
+      <stop offset="0.8" stop-color="#B9801A"/>
+      <stop offset="1" stop-color="#7A4E08"/>
+    </radialGradient>
+    <linearGradient id="crescent" x1="0.15" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#FFF7C4"/>
+      <stop offset="0.35" stop-color="#FFD75E"/>
+      <stop offset="0.75" stop-color="#E0A526"/>
+      <stop offset="1" stop-color="#9A6410"/>
+    </linearGradient>
+    <linearGradient id="window" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#0A3A2F"/>
+      <stop offset="1" stop-color="#14594A"/>
+    </linearGradient>
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="1.6"/>
+    </filter>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="0.9" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="drop" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="1.1" dy="1.4" stdDeviation="1.0" flood-color="#000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <rect width="108" height="108" fill="url(#bg)"/>
+  <g>
+    <circle cx="24" cy="26" r="0.9" fill="#FFF6D8" opacity="0.75"/>
+    <circle cx="82" cy="22" r="1.1" fill="#FFF6D8" opacity="0.75"/>
+    <circle cx="88" cy="44" r="0.7" fill="#FFF6D8" opacity="0.75"/>
+    <circle cx="20" cy="50" r="0.6" fill="#FFF6D8" opacity="0.75"/>
+    <circle cx="30" cy="16" r="0.5" fill="#FFF6D8" opacity="0.75"/>
+    <circle cx="76" cy="34" r="0.5" fill="#FFF6D8" opacity="0.75"/>
+    <circle cx="36" cy="38" r="0.45" fill="#FFF6D8" opacity="0.75"/>
+    <circle cx="72" cy="14" r="0.6" fill="#FFF6D8" opacity="0.75"/>
+    <path d="M80,27.8 Q80.55,29.45 82.2,30 Q80.55,30.55 80,32.2 Q79.45,30.55 77.8,30 Q79.45,29.45 80,27.8 Z" fill="#FFE9A6" opacity="0.9"/>
+    <path d="M28,32.4 Q28.4,33.6 29.6,34 Q28.4,34.4 28,35.6 Q27.6,34.4 26.4,34 Q27.6,33.6 28,32.4 Z" fill="#FFE9A6" opacity="0.9"/>
+  </g>
+  <circle cx="54" cy="30" r="30" fill="url(#halo)"/>
+  <!-- distant mosque silhouette on the horizon -->
+  <path d="M0,92 L0,84 Q10,80 18,84 L18,80 Q24,72 30,80 L30,84 Q40,79 50,84 L58,84 Q68,79 78,84 L78,80 Q84,72 90,80 L90,84 Q98,80 108,84 L108,92 Z" fill="#031411" opacity="0.55"/>
+  <rect y="91" width="108" height="17" fill="#031411" opacity="0.55"/>
+</svg>

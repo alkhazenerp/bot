@@ -1,4 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">عباد الرحمن</string>
+    <string name="tile_label">الصلاة القادمة</string>
+    <string name="widget_config_label">تخصيص الودجت</string>
+
+    <string name="widget_next_label">عباد الرحمن • الصلاة القادمة</string>
+    <string name="widget_next_desc">اسم الصلاة القادمة ووقتها مع عدّاد تنازلي</string>
+    <string name="widget_today_label">عباد الرحمن • مواقيت اليوم</string>
+    <string name="widget_today_desc">جميع أوقات اليوم مع إبراز الصلاة القادمة</string>
+    <string name="widget_ring_label">عباد الرحمن • الحلقة</string>
+    <string name="widget_ring_desc">حلقة تقدّم دائرية بين الصلاتين</string>
+    <string name="widget_strip_label">عباد الرحمن • الشريط</string>
+    <string name="widget_strip_desc">شريط أفقي نحيف بجميع الأوقات</string>
+    <string name="widget_clock_label">عباد الرحمن • الساعة</string>
+    <string name="widget_clock_desc">ساعة كبيرة مع التاريخين والصلاة القادمة</string>
 </resources>
