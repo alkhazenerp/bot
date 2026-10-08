@@ -72,7 +72,9 @@ object Scheduler {
 
     /** Events that should be handled now; [lastHandled] prevents handling the same event twice. */
     fun dueEvents(context: Context, now: Long, lastHandled: Long): List<PrayerEvent> {
-        val from = maxOf(lastHandled + 1, now - 6 * 3_600_000L)
+        // A marker in the future means the clock was set back; ignore it rather than skip events.
+        val last = if (lastHandled > now + 60_000L) 0L else lastHandled
+        val from = maxOf(last + 1, now - 6 * 3_600_000L)
         return events(context, from, now + 1_000).filter { event ->
             // Restoring the ringer is always done, however late; sounds are skipped if very late.
             event.type == EventType.SILENT_END || event.type == EventType.REFRESH || now - event.time <= GRACE_MILLIS

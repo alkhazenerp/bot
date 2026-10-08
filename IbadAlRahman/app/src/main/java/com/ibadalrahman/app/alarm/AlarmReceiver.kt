@@ -30,7 +30,7 @@ class AlarmReceiver : BroadcastReceiver() {
                 Log.e("AlarmReceiver", "Failed to handle $event", e)
             }
         }
-        due.maxOfOrNull { it.time }?.let { s.lastHandledEventAt = maxOf(s.lastHandledEventAt, it) }
+        due.maxOfOrNull { it.time }?.let { s.lastHandledEventAt = it }
         // Exact-alarm delivery allows (re)starting foreground services from the background.
         Refresher.refreshAll(context, allowStartService = true)
     }
@@ -103,7 +103,9 @@ object SilentMode {
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val s = Settings.get(context)
-        if (s.savedRingerMode >= 0 && System.currentTimeMillis() > s.silentUntil) SilentMode.restore(context)
+        val now = System.currentTimeMillis()
+        if (s.lastHandledEventAt > now) s.lastHandledEventAt = now // the clock was moved backwards
+        if (s.savedRingerMode >= 0 && now > s.silentUntil) SilentMode.restore(context)
         Refresher.refreshAll(context, allowStartService = true)
     }
 }
