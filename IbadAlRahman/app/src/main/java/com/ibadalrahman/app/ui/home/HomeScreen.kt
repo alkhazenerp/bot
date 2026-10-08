@@ -127,41 +127,41 @@ fun HomeScreen(modifier: Modifier, navigate: (Route) -> Unit) {
 
         item {
             key(resumeTick) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (!Permissions.notificationsGranted(context) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    Banner("اسمح بالإشعارات ليعمل الأذان والعدّاد بجانب الساعة", "سماح", MaterialTheme.colorScheme.error) {
-                        notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (!Permissions.notificationsGranted(context) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        Banner("اسمح بالإشعارات ليعمل الأذان والعدّاد بجانب الساعة", "سماح", MaterialTheme.colorScheme.error) {
+                            notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
                     }
-                }
-                if (!Permissions.exactAlarmsAllowed(context)) {
-                    Banner("فعّل «المنبهات والتذكيرات» ليُرفع الأذان في وقته بالضبط", "تفعيل", MaterialTheme.colorScheme.error) {
-                        Permissions.openExactAlarmSettings(context)
+                    if (!Permissions.exactAlarmsAllowed(context)) {
+                        Banner("فعّل «المنبهات والتذكيرات» ليُرفع الأذان في وقته بالضبط", "تفعيل", MaterialTheme.colorScheme.error) {
+                            Permissions.openExactAlarmSettings(context)
+                        }
                     }
-                }
-                if (s.locationMode == LocationMode.AUTO && !LocationHelper.hasPermission(context)) {
-                    Banner("اسمح بالوصول إلى الموقع لحساب المواقيت تلقائيًا", "سماح", MaterialTheme.colorScheme.tertiary) {
-                        locationLauncher.launch(
-                            arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION),
+                    if (s.locationMode == LocationMode.AUTO && !LocationHelper.hasPermission(context)) {
+                        Banner("اسمح بالوصول إلى الموقع لحساب المواقيت تلقائيًا", "سماح", MaterialTheme.colorScheme.tertiary) {
+                            locationLauncher.launch(
+                                arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION),
+                            )
+                        }
+                    }
+                    if (!s.batteryHintDismissed && !Permissions.ignoringBatteryOptimizations(context)) {
+                        DismissibleBanner(
+                            "استثنِ التطبيق من توفير البطارية لضمان عدم تأخر الأذان",
+                            "استثناء",
+                            onClick = { Permissions.requestIgnoreBatteryOptimizations(context) },
+                            onDismiss = { s.batteryHintDismissed = true },
+                        )
+                    }
+                    if (!s.adhanHintDismissed && s.adhanUri.isBlank() && Prayer.salawat.any { s.alertMode(it) == AlertMode.ADHAN }) {
+                        DismissibleBanner(
+                            "اختر ملف الأذان المفضّل لديك من ذاكرة الهاتف",
+                            "اختيار",
+                            onClick = { navigate(Route.ADHAN) },
+                            onDismiss = { s.adhanHintDismissed = true },
                         )
                     }
                 }
-                if (!s.batteryHintDismissed && !Permissions.ignoringBatteryOptimizations(context)) {
-                    DismissibleBanner(
-                        "استثنِ التطبيق من توفير البطارية لضمان عدم تأخر الأذان",
-                        "استثناء",
-                        onClick = { Permissions.requestIgnoreBatteryOptimizations(context) },
-                        onDismiss = { s.batteryHintDismissed = true },
-                    )
-                }
-                if (!s.adhanHintDismissed && s.adhanUri.isBlank() && Prayer.salawat.any { s.alertMode(it) == AlertMode.ADHAN }) {
-                    DismissibleBanner(
-                        "اختر ملف الأذان المفضّل لديك من ذاكرة الهاتف",
-                        "اختيار",
-                        onClick = { navigate(Route.ADHAN) },
-                        onDismiss = { s.adhanHintDismissed = true },
-                    )
-                }
-            }
             }
         }
 

@@ -70,7 +70,9 @@ object Notifications {
             description = "تنبيه بموعد إقامة الصلاة"
             setSound(chimeUri(context), notificationAudio)
         }
-        val status = NotificationChannel(CHANNEL_STATUS, "العد التنازلي في شريط الحالة", NotificationManager.IMPORTANCE_LOW).apply {
+        // DEFAULT (not LOW) importance: many devices hide "silent" notification icons from the
+        // status bar, which would hide the countdown. Sound and vibration stay off.
+        val status = NotificationChannel(CHANNEL_STATUS, "العد التنازلي في شريط الحالة", NotificationManager.IMPORTANCE_DEFAULT).apply {
             description = "يعرض الصلاة القادمة والوقت المتبقي بجانب الساعة"
             setShowBadge(false)
             setSound(null, null)
