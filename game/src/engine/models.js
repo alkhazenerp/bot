@@ -19,6 +19,7 @@ const PALETTES = {
   white: ['#d8d5cd', '#cfcac0', '#e2ded6'],
   tan: ['#b9a27a', '#a8916a', '#c8b38c'],
   grey: ['#7c8084', '#686c70', '#8e9296'],
+  urban: ['#7c8084', '#686c70', '#8e9296', '#55595c'],
   night: ['#2c2f30', '#222526', '#373a3b'],
   gold: ['#c99a2e', '#a77c1f', '#e2b64a'],
   iran: ['#8c8a6c', '#6b6a52', '#a6a184'],
@@ -637,7 +638,9 @@ function soldierModel({ palette = 'regime', kind = 'soldier' }) {
 
 // ===================== المروحيات =====================
 function lathe(profile, seg = 16) {
-  const g = new THREE.LatheGeometry(profile.map(([r, y]) => new THREE.Vector2(r, y)), seg);
+  // LatheGeometry يتوقع النقاط من الأسفل للأعلى ليكون الوجه الخارجي ظاهراً
+  const pts = profile[0][1] > profile[profile.length - 1][1] ? [...profile].reverse() : profile;
+  const g = new THREE.LatheGeometry(pts.map(([r, y]) => new THREE.Vector2(r, y)), seg);
   g.rotateX(Math.PI / 2);
   return g;
 }
@@ -680,6 +683,8 @@ function mi24Model({ palette = 'ru_heli' }) {
   disc.rotation.x = -Math.PI / 2;
   disc.name = 'disc';
   disc.userData.heat = 0.2;
+  disc.userData.noThermalSwap = true;
+  disc.userData.matKey = 'rotor';
   rotor.add(disc);
   root.add(rotor);
   const tail = pivot('tailRotor', 0.3, 3.4, -9.3);
@@ -710,6 +715,8 @@ function mi8Model({ palette = 'ru_heli' }) {
   const disc = new THREE.Mesh(new THREE.CircleGeometry(10.8, 40), getMat('rotor'));
   disc.rotation.x = -Math.PI / 2;
   disc.name = 'disc';
+  disc.userData.noThermalSwap = true;
+  disc.userData.matKey = 'rotor';
   rotor.add(disc);
   root.add(rotor);
   const tail = pivot('tailRotor', -0.3, 3.6, -10.3);
@@ -834,11 +841,14 @@ export function towLauncherModel(skin = 'olive') {
 
 export function operatorModel() {
   const r = soldierModel({ palette: 'friend', kind: 'friend' }).root;
-  // جاثٍ خلف القاذف
+  // جاثٍ خلف القاذف ووجهه نحو ساحة المعركة
   r.getObjectByName('legL').rotation.x = -1.2;
   r.getObjectByName('legR').rotation.x = 0.4;
   r.position.y = -0.35;
-  return r;
+  r.rotation.y = Math.PI;
+  const g = new THREE.Group();
+  g.add(r);
+  return g;
 }
 
 export function kpvModel(skin = 'olive') {
@@ -856,7 +866,7 @@ export function kpvModel(skin = 'olive') {
   G.box(0.08, 0.12, 0.08, mk, 0, 0.14, 1.8);
   G.box(0.4, 0.06, 0.06, mk, 0, -0.02, -0.55);
   G.box(0.28, 0.28, 0.25, 'camo', 0.24, -0.08, 0.05);
-  G.box(0.75, 0.55, 0.03, 'camo', 0, 0.15, 0.55);
+  G.box(0.75, 0.36, 0.03, 'camo', 0, -0.06, 0.55);
   pitch.add(G.build('gun'));
   pitch.add(pivot('muzzle', 0, 0.02, 1.92));
   yaw.add(pitch);

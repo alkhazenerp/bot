@@ -134,7 +134,8 @@ export class Post {
     }
   }
 
-  render(scene, camera, time) {
+  render(scene, camera, time, exposure) {
+    if (exposure != null) this.renderer.toneMappingExposure = exposure;
     this.renderPass.scene = scene;
     this.renderPass.camera = camera;
     this.u.uTime.value = time;

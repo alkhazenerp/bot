@@ -175,8 +175,47 @@ export class Terrain {
       if (d > 140) continue;
       const idx = j * nx + i;
       const f = 1 - smoothstep(16, 120, d);
-      const lip = Math.exp(-Math.pow((d - 15) / 4, 2)) * 1.3; // حافة الساتر
+      const lip = Math.exp(-Math.pow((d - 19) / 4, 2)) * 0.5; // حافة الساتر (منخفضة كي لا تحجب خط الرمي)
       heights[idx] = lerp(heights[idx], top, f * f * (3 - 2 * f)) + lip * (z < 0 ? 1 : 0.4);
+    }
+    this._clearSightlines();
+  }
+
+  // فتح خطوط الرؤية من موقع اللاعب نحو مواقع الأهداف والطرق بخفض الأرض حيث تحجب فقط
+  _clearSightlines() {
+    const { axisX, axisZ, nx, nz, heights } = this;
+    const eye = this.playerH + 1.15;
+    const targets = [];
+    for (const a of Object.values(this.layout.anchors || {})) targets.push({ x: a[0], z: a[1], lift: 1.6, half: 40 });
+    for (const r of this.roads) {
+      for (let k = 0; k < r.pts.length; k += 10) {
+        const [x, z] = r.pts[k];
+        const d = Math.hypot(x, z);
+        if (z > -150 || d > 3600 || d < 250) continue;
+        targets.push({ x, z, lift: 1.4, half: 26 });
+      }
+    }
+    for (const tg of targets) {
+      const tx = tg.x, tz = tg.z;
+      const ty = this._sampleGrid(tx, tz) + tg.lift;
+      const L2 = tx * tx + tz * tz;
+      if (L2 < 1) continue;
+      const half = tg.half, blend = half * 0.6;
+      const [i0] = findCell(axisX, Math.min(0, tx) - half - blend), [i1] = findCell(axisX, Math.max(0, tx) + half + blend);
+      const [j0] = findCell(axisZ, Math.min(0, tz) - half - blend), [j1] = findCell(axisZ, Math.max(0, tz) + half + blend);
+      for (let j = j0; j <= j1 + 1 && j < nz; j++) for (let i = i0; i <= i1 + 1 && i < nx; i++) {
+        const x = axisX[i], z = axisZ[j];
+        const t = (x * tx + z * tz) / L2;
+        if (t < 0.06 || t > 0.96) continue;
+        const px = x - tx * t, pz = z - tz * t;
+        const dp = Math.sqrt(px * px + pz * pz);
+        if (dp > half + blend) continue;
+        const idx = j * nx + i;
+        const lineY = eye + (ty - eye) * t - 1.8;
+        if (heights[idx] <= lineY) continue;
+        const w = 1 - smoothstep(half, half + blend, dp);
+        heights[idx] = lerp(heights[idx], lineY, w);
+      }
     }
   }
 
@@ -201,7 +240,7 @@ export class Terrain {
   groundAt(x, z) {
     // أعلى من الأرض والماء والجسور
     let h = this.heightAt(x, z);
-    if (this.river && h < this.river.level) h = this.river.level;
+    if (this.river && h < this.river.level && this.riverDist(x, z) < 20) h = this.river.level;
     for (const r of this.roads) {
       if (r.deck == null) continue;
       const bb = r.bridgeBox;
@@ -618,5 +657,15 @@ export class Terrain {
       step = Math.min(12, 1.5 + t * 0.01);
     }
     return null;
+  }
+
+  dispose() {
+    this.map?.dispose();
+    this._thermalTex?.dispose();
+    this.mesh.userData._thMat?.dispose();
+    this.material.dispose();
+    this.waterMat?.dispose();
+    this.horizon.traverse((o) => o.material?.dispose());
+    this.canvas = null;
   }
 }

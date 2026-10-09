@@ -93,11 +93,13 @@ export class FX {
     this._ri = 0;
 
     // تغليف الدوال المسجلة لإعادة اللقطة
+    this._recDepth = 0;
     for (const name of RECORDED) {
       const orig = this[name].bind(this);
       this[name] = (...args) => {
-        if (this.recorder && !this.replaying) this.recorder.event(name, args.map(ser));
-        return orig(...args);
+        if (this.recorder && !this.replaying && this._recDepth === 0) this.recorder.event(name, args.map(ser));
+        this._recDepth++;
+        try { return orig(...args); } finally { this._recDepth--; }
       };
     }
   }

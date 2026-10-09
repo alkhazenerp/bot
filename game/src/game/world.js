@@ -68,8 +68,9 @@ export class World {
     progress(0.5, 'بناء القرى والمعالم…');
     await nextFrame();
     const seed = hashStr(r.id);
+    const anchorList = Object.values(r.layout.anchors || {});
     (r.layout.villages || []).forEach((v, i) => {
-      const s = buildSettlement(this.terrain, v, seed + i * 31);
+      const s = buildSettlement(this.terrain, v, seed + i * 31, anchorList);
       this.scene.add(s.mesh);
       this.colliders.push(...s.colliders);
       this.rooftops = (this.rooftops || []).concat(s.rooftops);
@@ -79,7 +80,7 @@ export class World {
     for (let i = 0; i < 8; i++) {
       const x = rand(-2600, 2600), z = -rand(500, 3800);
       if (this.terrain.isOnRoad(x, z, 30) || this.terrain.riverDist(x, z) < 40 || this.terrain.heightAt(x, z) > 60) continue;
-      const s = buildSettlement(this.terrain, { x, z, r: 50, n: 2 + Math.floor(rnd() * 3), style: 'village', damage: 0.3 }, seed + 100 + i);
+      const s = buildSettlement(this.terrain, { x, z, r: 50, n: 2 + Math.floor(rnd() * 3), style: 'village', damage: 0.3 }, seed + 100 + i, anchorList);
       this.scene.add(s.mesh);
       this.colliders.push(...s.colliders);
     }
@@ -139,6 +140,7 @@ export class World {
     await nextFrame();
     this.audio.ambience(this.envCfg.weather === 'rain' ? 'rain' : 'wind');
     this.camera.position.copy(this.player.pos);
+    this.env.applyEnvIntensity(this.scene);
     // تسخين المظللات
     try { this.renderer.compile(this.scene, this.camera); } catch (e) { /* */ }
     progress(1, 'جاهز');
@@ -146,6 +148,7 @@ export class World {
 
   add(obj) {
     this.scene.add(obj);
+    if (this.env) this.env.applyEnvIntensity(obj);
     if (this.vision && this.vision.mode !== 'day') this.vision.apply(obj);
   }
 
@@ -416,7 +419,7 @@ export class World {
     this.scene.traverse((o) => {
       if (o.geometry) o.geometry.dispose();
     });
-    if (this.terrain && this.terrain.map) this.terrain.map.dispose();
-    if (this.env && this.env.envRT) this.env.envRT.dispose();
+    this.terrain?.dispose();
+    this.env?.dispose();
   }
 }

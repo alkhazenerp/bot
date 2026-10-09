@@ -127,17 +127,19 @@ export function camoTexture(colors, seed = 1, size = 256) {
       g.fillStyle = colors[k];
       for (let i = 0; i < 9; i++) {
         const cx = rnd() * size, cy = rnd() * size;
-        g.beginPath();
         const pts = 9;
-        for (let j = 0; j <= pts; j++) {
-          const a = (j / pts) * Math.PI * 2;
-          const r = (18 + rnd() * 34) * (k === colors.length - 1 ? 0.6 : 1);
-          const x = cx + Math.cos(a) * r * 1.6, y = cy + Math.sin(a) * r;
-          if (j === 0) g.moveTo(x, y); else g.lineTo(x, y);
+        const rr = [];
+        for (let j = 0; j <= pts; j++) rr.push((18 + rnd() * 34) * (k === colors.length - 1 ? 0.6 : 1));
+        // رسم البقعة مع نسخ عبر الحواف ليتكرر النسيج بلا خطوط
+        for (const ox of [-size, 0, size]) for (const oy of [-size, 0, size]) {
+          g.beginPath();
+          for (let j = 0; j <= pts; j++) {
+            const a = (j / pts) * Math.PI * 2;
+            const x = cx + ox + Math.cos(a) * rr[j] * 1.6, y = cy + oy + Math.sin(a) * rr[j];
+            if (j === 0) g.moveTo(x, y); else g.lineTo(x, y);
+          }
+          g.closePath(); g.fill();
         }
-        g.closePath(); g.fill();
-        // تكرار عبر الحواف
-        g.save(); g.translate(cx > size / 2 ? -size : size, 0); g.fill(); g.restore();
       }
     }
     // اتساخ وغبار

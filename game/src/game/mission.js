@@ -79,17 +79,17 @@ export class MissionRunner {
   _setup() {
     const T = this.def.template, p = this.p;
     if (T === 'column') {
-      const groups = this.n(p.groups || 3);
+      const groups = (p.groups || 3) + ({ easy: -1, normal: 0, hard: 1, legend: 1 }[this.diff.id] || 0);
       let total = 0;
       for (let g = 0; g < groups; g++) {
-        const size = 3 + Math.floor(this.rnd() * 2) + (this.power > 5 ? 1 : 0);
+        const size = 3 + (this.rnd() < 0.5 ? 1 : 0) + (this.power > 5 && this.diff.id !== 'easy' ? 1 : 0);
         const units = [];
         for (let k = 0; k < size; k++) units.push(p.mix[Math.floor(this.rnd() * p.mix.length)]);
         if (g === 0) units[0] = 't72';
         total += size;
         this.waves.push({ at: g === 0 ? 3 : null, after: g === 0 ? null : 18 + this.rnd() * 10, kind: 'convoy', lane: p.lanes[g % p.lanes.length], units, behavior: 'pass' });
       }
-      const need = Math.max(3, Math.round(total * 0.7));
+      const need = Math.max(3, Math.min(14, Math.round(total * (this.diff.id === 'easy' ? 0.45 : 0.55))));
       this.objectives.push({ type: 'kill', count: need, text: `دمّر ${need} آليات من الأرتال`, progress: () => this.kills });
       this.maxEscapes = p.maxEscapes ?? 3;
       this.objectives.push({ type: 'noescape', text: `لا تسمح بفرار أكثر من ${this.maxEscapes}`, progress: () => this.escapes, fail: true });
@@ -126,7 +126,7 @@ export class MissionRunner {
       this.waves.push({ at: 6, kind: 'convoy', lane, units, behavior: 'pass', bossIndex: 2, speedMul: 0.85 });
       (p.statics || []).forEach(([a, u]) => this.waves.push({ at: 0, kind: 'static', anchor: a, unit: u }));
       this.waves.push({ at: 40, kind: 'squad', anchor: Object.keys(this.world.anchors)[0], units: this._squad(4) });
-      this.objectives.push({ type: 'hvt', text: `دمّر دبابة القائد ${UNITS[p.boss].name}`, progress: () => this._tagDone('hvt'), count: 1 });
+      this.objectives.push({ type: 'hvt', text: `دمّر دبابة القائد (${UNITS[p.boss].name.replace('دبابة ', '')})`, progress: () => this._tagDone('hvt'), count: 1 });
       this.timeLimit = p.time || 160;
       this.hvtEscapeFails = true;
     } else if (T === 'militia') {
@@ -148,7 +148,7 @@ export class MissionRunner {
       this.waves.push({ at: 30, kind: 'air', unit: 'mi24', tag: null });
       this.waves.push({ at: 70, kind: 'air', unit: 'mi8', tag: null });
       this.objectives.push({ type: 'tag', text: 'دمّر آخر حصون النظام', progress: () => this._tagDone(), count: p.statics.length });
-      this.objectives.push({ type: 'kill', text: 'دمّر 12 هدفاً', count: 12, progress: () => this.kills });
+      this.objectives.push({ type: 'kill', text: 'دمّر 10 أهداف', count: 10, progress: () => this.kills });
       this.timeLimit = 540;
       this.forceHelis = true;
     }
@@ -181,12 +181,14 @@ export class MissionRunner {
       if (!L) return;
       wv.units.forEach((u, i) => {
         const e = w.spawn(u, {
-          lane: L, startD: Math.max(0, 40 - i * 26), behavior: wv.kind === 'friends' ? 'advance' : wv.behavior,
+          lane: L, startD: 10 + (wv.units.length - 1 - i) * 26, behavior: wv.kind === 'friends' ? 'advance' : wv.behavior,
           stopAt: wv.stopAt ? L.total * wv.stopAt - i * 28 : null, tag: i === wv.bossIndex ? 'hvt' : null, speed: (UNITS[u].speed || 8) * (wv.speedMul || 1),
         });
-        if (wv.kind === 'convoy' && e.startD === undefined) e.d = -i * 26;
-        e.d = 40 - i * 26;
+        // الأول في المقدمة، والبقية خلفه على مسافات موجبة دائماً
+        e.d = 10 + (wv.units.length - 1 - i) * 26;
         if (i === wv.bossIndex) { e.shtoraOn = Math.random() < this.diff.shtora; e.spotted = true; }
+        // رتل الثوار يصل بعد قطع مسافة معقولة ضمن زمن المهمة
+        if (wv.kind === 'friends') e.arriveAt = Math.min(L.total - 2, e.d + 1700);
         wv.ents.push(e);
       });
       if (wv.kind === 'convoy' && wv.at !== 0 && this.waveIdx > 0) this.radio('wave');
@@ -246,6 +248,11 @@ export class MissionRunner {
     if (e.team === 'friend') {
       this.friendArrived++;
       this.radio('friendArrive');
+      return;
+    }
+    // مروحية مطلوب إسقاطها انسحبت: تعود أخرى بعد قليل
+    if (e.tag === 'air' && this.state === 'running') {
+      this.world.after(12, () => { if (this.state === 'running') { this.world.spawn(e.type, { tag: 'air' }); this.radio('heliIn'); } });
       return;
     }
     if (silent) return;

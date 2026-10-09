@@ -14,7 +14,8 @@ export class Vision {
   _mat(heat, src) {
     const q = Math.round(heat * 24) / 24;
     const hasMap = src && src.userData && src.userData.thermalMap;
-    const key = `${q}|${src && src.side}|${src && src.alphaTest ? 'a' : ''}|${src && src.transparent ? 't' : ''}|${hasMap ? 'm' : ''}`;
+    const keepMap = src && (src.alphaTest || src.transparent) && src.map ? src.map : null;
+    const key = `${q}|${src && src.side}|${src && src.alphaTest ? 'a' : ''}|${src && src.transparent ? 't' : ''}|${hasMap ? 'm' : ''}|${keepMap ? keepMap.uuid : ''}|${src ? src.opacity : 1}|${src ? src.depthWrite : true}`;
     if (this.cache.has(key)) return this.cache.get(key);
     const m = new THREE.MeshLambertMaterial({
       color: new THREE.Color(0.06, 0.06, 0.06),
@@ -23,7 +24,7 @@ export class Vision {
       transparent: src ? src.transparent : false,
       opacity: src ? src.opacity : 1,
       alphaTest: src ? src.alphaTest : 0,
-      map: src && src.alphaTest ? src.map : null,
+      map: keepMap,
       depthWrite: src ? src.depthWrite : true,
     });
     if (src && src.alphaTest) m.emissiveMap = null;
@@ -78,9 +79,11 @@ export class Vision {
     if (this.mode === 'day') return;
     obj.traverse((o) => {
       if (!o.isMesh || o.userData.noThermalSwap) return;
-      const orig = this.orig.get(o) || o.material;
-      if (!orig.userData || !orig.userData.thermal) this.orig.set(o, orig);
-      o.material = this._thermalFor({ material: this.orig.get(o), userData: o.userData });
+      const cur = o.material;
+      if (!(cur && cur.userData && cur.userData.thermal)) this.orig.set(o, cur);
+      const base = this.orig.get(o);
+      if (!base) return;
+      o.material = this._thermalFor({ material: base, userData: o.userData });
     });
   }
 

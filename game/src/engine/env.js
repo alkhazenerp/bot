@@ -60,6 +60,7 @@ export class Environment {
     cam.near = 10; cam.far = 3000;
     this.shadowRadius = 120;
     cam.left = -120; cam.right = 120; cam.top = 120; cam.bottom = -120;
+    cam.updateProjectionMatrix();
     this.group.add(this.sun, this.sun.target);
     this.hemi = new THREE.HemisphereLight(this.t.hemiSky, this.t.hemiGround, this.t.hemiI);
     this.group.add(this.hemi);
@@ -67,7 +68,8 @@ export class Environment {
     this.fogColor = new THREE.Color(this.t.fog);
     scene.fog = new THREE.FogExp2(this.fogColor.getHex(), this.t.fogD);
     scene.background = this.fogColor.clone();
-    renderer.toneMappingExposure = this.t.exposure;
+    this.exposure = this.t.exposure;
+    renderer.toneMappingExposure = this.exposure;
 
     // خريطة البيئة من السماء
     try {
@@ -162,5 +164,26 @@ export class Environment {
     this.sky.position.copy(camera.position);
     this.clouds.position.x += this.wind.x * dt * 3;
     this.clouds.position.z += this.wind.z * dt * 3;
+  }
+
+  // three r160 لا يدعم scene.environmentIntensity: نضبط شدة الانعكاس لكل مادة
+  applyEnvIntensity(root) {
+    const k = this.envIntensity;
+    root.traverse((o) => {
+      if (!o.isMesh) return;
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      for (const m of mats) {
+        if (!m || !m.isMeshStandardMaterial) continue;
+        if (m.userData.baseEnvI == null) m.userData.baseEnvI = m.envMapIntensity;
+        m.envMapIntensity = m.userData.baseEnvI * k;
+      }
+    });
+  }
+
+  dispose() {
+    this.sun.dispose?.();
+    this.sky.material.dispose();
+    this.clouds.children.forEach((s) => s.material.dispose());
+    if (this.envRT) this.envRT.dispose();
   }
 }

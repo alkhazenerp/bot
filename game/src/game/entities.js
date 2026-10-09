@@ -160,7 +160,7 @@ export class Entity {
         return;
       }
       if (on) {
-        if (!o.userData.origMat) o.userData.origMat = o.material;
+        if (!o.userData.origMat) o.userData.origMat = (this.world.vision.orig.get(o)) || o.material;
         o.material = getWreckMat();
         o.userData.wreckHeat = 0.85;
       } else if (o.userData.origMat) {
@@ -306,7 +306,8 @@ export class GroundVehicle extends Entity {
       this._settle(true);
     } else if (this.lane) this._placeOnLane(true);
     if (this.gun) this.gun.userData.baseX = this.gun.rotation.x;
-    if (opts.hullDown) this.root.position.y -= 0.9;
+    this.sink = opts.hullDown ? 0.65 : 0;
+    if (this.sink) this.root.position.y -= this.sink;
     this.engine = null;
   }
 
@@ -333,7 +334,7 @@ export class GroundVehicle extends Entity {
     const pitch = Math.atan2(hf - hb, 2 * L), roll = Math.atan2(hr - hl, 2 * W);
     this.pitchS = snap ? pitch : damp(this.pitchS, pitch, 6, 1 / 60);
     this.rollS = snap ? roll : damp(this.rollS, roll, 6, 1 / 60);
-    this.root.position.y = y;
+    this.root.position.y = y - (this.sink || 0);
     this.root.rotation.set(-this.pitchS + this.recoil * 0.03, this.heading, this.rollS, 'YXZ');
   }
 
@@ -434,7 +435,7 @@ export class GroundVehicle extends Entity {
       const prev = _v2.copy(this.root.position);
       this._placeOnLane(false);
       this.vel.copy(this.root.position).sub(prev).divideScalar(Math.max(dt, 1e-4));
-      if (this.d >= this.lane.total - 2) {
+      if (this.d >= (this.arriveAt ?? this.lane.total - 2)) {
         if (this.behavior === 'pass' || this.team === 'friend') {
           this.arrived = true;
           w.onEntityEscaped(this);
@@ -502,7 +503,7 @@ export class GroundVehicle extends Entity {
       if (e === this || !(e instanceof GroundVehicle) || e.cls === 'static') continue;
       const dx = e.pos.x - this.pos.x, dz = e.pos.z - this.pos.z;
       const fwd = dx * fx + dz * fz;
-      if (fwd < 0 || fwd > 22) continue;
+      if (fwd < 0.5 || fwd > 22) continue;
       const lat = Math.abs(dx * fz - dz * fx);
       if (lat < 4) return e;
     }

@@ -119,6 +119,7 @@ export class ReplayDirector {
         id, o, entity: r.entity, parent: o.parent, pos: o.position.clone(), quat: o.quaternion.clone(), scale: o.scale.clone(), vis: o.visible, wreck: r.entity ? r.entity.wrecked : false,
       });
       w.scene.attach(o);
+      w.vision.restore(o);
       o.visible = false;
     }
     w.fx.clear();
@@ -258,10 +259,13 @@ export class ReplayDirector {
     if (want.y < gy) want.y = gy;
     const cut = shot !== this.shot;
     this.shot = shot;
-    if (this.first || cut) { this.camPos.copy(want); this.camLook.copy(look); this.first = false; }
-    else {
-      const k = 1 - Math.exp(-(shot === 'chase' ? 12 : 4) * dt);
-      this.camPos.lerp(want, k);
+    if (this.first || cut || shot === 'chase') {
+      // الملاحقة ملتصقة بالصاروخ (سرعته 280 م/ث لا تحتمل التنعيم)
+      this.camPos.copy(want);
+      if (this.first || cut) this.camLook.copy(look); else this.camLook.lerp(look, 1 - Math.exp(-14 * dt));
+      this.first = false;
+    } else {
+      this.camPos.lerp(want, 1 - Math.exp(-4 * dt));
       this.camLook.lerp(look, 1 - Math.exp(-10 * dt));
     }
     cam.position.copy(this.camPos);

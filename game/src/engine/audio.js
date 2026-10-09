@@ -302,7 +302,7 @@ export class AudioEngine {
 
   // حلقة صوتية مكانية: مروحية، طائرة، مسيّرة، صاروخ
   loop(kind, pos) {
-    if (!this.ok) return { update() {}, stop() {} };
+    if (!this.ok) return { kind, stopped: true, update() {}, throttle() {}, stop() {} };
     const ctx = this.ctx, t = this.now;
     const f = ctx.createBiquadFilter(); f.type = 'lowpass';
     const g = ctx.createGain(); g.gain.value = 0;
@@ -310,6 +310,7 @@ export class AudioEngine {
     f.connect(g);
     if (p) g.connect(p).connect(this.sfx); else g.connect(this.sfx);
     const nodes = [];
+    let jetOsc = null, fpvOsc = null;
     let base = 1, cutoff = 1200, range = 1;
     if (kind === 'heli') {
       const n = this._noise('brown', t, 3600, 1);
@@ -333,7 +334,7 @@ export class AudioEngine {
       o.connect(og).connect(f);
       o.start(t);
       nodes.push(n, o);
-      this._jetOsc = o;
+      jetOsc = o;
       base = 2.2; cutoff = 4000; range = 9;
     } else if (kind === 'moped') {
       const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 92;
@@ -353,7 +354,7 @@ export class AudioEngine {
       o.connect(og).connect(f); o2.connect(og);
       o.start(t); o2.start(t);
       nodes.push(o, o2);
-      this._fpv = [o, o2];
+      fpvOsc = [o, o2];
       base = 0.6; cutoff = 3000; range = 50;
     } else if (kind === 'motor') {
       const n = this._noise('white', t, 3600, 1);
@@ -381,15 +382,15 @@ export class AudioEngine {
         g.gain.setTargetAtTime(base * sp.gain, tt, 0.08);
         f.frequency.setTargetAtTime(Math.min(cutoff, sp.cutoff), tt, 0.08);
         if (p) p.pan.setTargetAtTime(sp.pan, tt, 0.08);
-        if (vel && kind === 'jet' && self._jetOsc) {
+        if (vel && kind === 'jet' && jetOsc) {
           const dir = pos2.clone().sub(self.lpos).normalize();
           const vr = vel.dot(dir);
           const dop = SPEED_OF_SOUND / (SPEED_OF_SOUND + vr);
-          self._jetOsc.frequency.setTargetAtTime(85 * dop, tt, 0.1);
+          jetOsc.frequency.setTargetAtTime(85 * dop, tt, 0.1);
         }
       },
       throttle(k) {
-        if (self._fpv) for (const o of self._fpv) o.frequency.setTargetAtTime(200 + k * 260, self.now, 0.05);
+        if (fpvOsc) for (const o of fpvOsc) o.frequency.setTargetAtTime(200 + k * 260, self.now, 0.05);
       },
       stop() {
         if (handle.stopped) return;
@@ -401,7 +402,7 @@ export class AudioEngine {
       },
     };
     this.loops.add(handle);
-    if (pos) handle.update(pos);
+    handle.update(pos || null);
     return handle;
   }
 
@@ -456,7 +457,7 @@ export class AudioEngine {
 
   ambience(kind) {
     if (!this.ok) return;
-    if (this._amb) { try { this._amb.n.stop(); } catch (e) { /* */ } this._amb = null; }
+    if (this._amb) { const a = this._amb; try { a.n.stop(); a.lfo.stop(); } catch (e) { /* */ } try { a.g.disconnect(); } catch (e) { /* */ } this._amb = null; }
     if (!kind) return;
     const ctx = this.ctx, t = this.now;
     const n = this._noise('brown', t, 3600, kind === 'rain' ? 2.2 : 0.5);
@@ -468,7 +469,7 @@ export class AudioEngine {
     lfo.connect(lg).connect(g.gain);
     lfo.start(t);
     n.connect(lp).connect(g).connect(this.sfx);
-    this._amb = { n, lfo };
+    this._amb = { n, lfo, g };
   }
 
   // أصوات معركة بعيدة عشوائية

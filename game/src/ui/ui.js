@@ -496,6 +496,10 @@ export class UI {
             if (!ok) this.toast('لم يُسمح باستخدام مستشعر الدوران على هذا الجهاز');
             else this.toast('حرّك الجهاز للتصويب');
           } else if (key === 'control') this.app.input.disableGyro();
+          if (key === 'quality' && v !== this.app.quality) {
+            if (from === 'pause') this.toast('تُطبّق الجودة الجديدة عند إعادة تشغيل اللعبة');
+            else { this.toast('جارٍ إعادة التحميل لتطبيق الجودة…'); setTimeout(() => location.reload(), 700); }
+          }
           this.app.applySettings();
           this.openSettings(from);
         };

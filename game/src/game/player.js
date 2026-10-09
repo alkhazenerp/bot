@@ -60,6 +60,9 @@ export class Player {
     this.recoil = 0;
     this.stats = { shots: 0, hits: 0, towShots: 0, towHits: 0 };
     this.camera = world.camera;
+    // إمداد دوري بصواريخ التاو
+    this.resupplyEvery = { easy: 35, normal: 45, hard: 55, legend: 65 }[world.diff.id] || 45;
+    this.resupplyT = this.resupplyEvery;
     this._buildModels(cfg.skin || 'olive');
   }
 
@@ -221,6 +224,16 @@ export class Player {
     }
     if (input.topToggle && this.topAttack) { this.useTop = !this.useTop; w.audio.click(); w.hudMsg(this.useTop ? 'top_on' : 'top_off'); }
 
+    // وصول الإمداد
+    this.resupplyT -= dt;
+    if (this.resupplyT <= 0) {
+      this.resupplyT = this.resupplyEvery;
+      if (this.ammo.tow < this.maxAmmo.tow) {
+        this.ammo.tow = Math.min(this.maxAmmo.tow, this.ammo.tow + 2);
+        w.hudMsg('resupply');
+        w.events.emit('radio', { kind: 'resupply', text: 'وصل الإمداد: صاروخا تاو إضافيان' });
+      }
+    }
     // التلقيم والتبريد
     if (!this.activeTow && this.reload > 0) this.reload = Math.max(0, this.reload - dt);
     this.rocketCd = Math.max(0, this.rocketCd - dt);
@@ -392,10 +405,10 @@ export class Player {
       const { yaw, pitch } = this.aimAngles();
       const q = this._q(new THREE.Quaternion());
       let p;
-      if (this.weapon === 'mg') p = this.kpvBase.clone().add(_v.set(0, 0.85, 0)).add(new THREE.Vector3(0, 0.33, 0.95).applyQuaternion(q));
+      if (this.weapon === 'mg') p = this.kpvBase.clone().add(_v.set(0, 0.85, 0)).add(new THREE.Vector3(0, 0.4, 0.95).applyQuaternion(q));
       else if (this.weapon === 'igla') p = this.iglaBase.clone().add(_v.set(0, 1.55, 0));
       else if (this.scoped) p = this.sightPos(new THREE.Vector3());
-      else p = this.pivot(new THREE.Vector3()).add(new THREE.Vector3(0.3, 0.42, 0.95).applyQuaternion(q));
+      else p = this.pivot(new THREE.Vector3()).add(new THREE.Vector3(0.55, 0.95, 1.75).applyQuaternion(q));
       p.y -= this.coverK * 0.95;
       cam.position.copy(p);
       cam.rotation.set(pitch + shY - this.coverK * 0.25, -yaw + shX, shR, 'YXZ');

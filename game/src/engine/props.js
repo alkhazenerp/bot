@@ -4,6 +4,20 @@ import { mulberry32, lerp, clamp } from '../core/util.js';
 import { facadeTexture, ablaqTexture, runwayTexture, grassTexture, flagTexture } from './textures.js';
 
 const ROOF_UV = [0.125, 0.875];
+
+// هل النقطة تحجب خط الرؤية بين اللاعب (0,0) وأحد مواقع الأهداف؟
+export function blocksSight(x, z, anchors, width = 30) {
+  if (!anchors) return false;
+  for (const a of anchors) {
+    const ax = a[0], az = a[1];
+    const l2 = ax * ax + az * az || 1;
+    const t = (x * ax + z * az) / l2;
+    if (t < 0.05 || t > 1.02) continue;
+    const dx = x - ax * t, dz = z - az * t;
+    if (dx * dx + dz * dz < width * width) return true;
+  }
+  return false;
+}
 const _m = new THREE.Matrix4();
 const _q = new THREE.Quaternion();
 const _v = new THREE.Vector3();
@@ -184,7 +198,7 @@ function addMosque(B, x, y, z, rot, rnd, scale = 1) {
 }
 
 // بناء قرية/بلدة/مدينة
-export function buildSettlement(terrain, v, seed) {
+export function buildSettlement(terrain, v, seed, anchors = null) {
   const rnd = mulberry32(seed);
   const B = new GeoBuilder();
   const colliders = [];
@@ -197,7 +211,8 @@ export function buildSettlement(terrain, v, seed) {
   let count = 0;
   const limit = v.n || 30;
   const cells = [];
-  for (let a = -N / 2; a < N / 2; a++) for (let b = -N / 2; b < N / 2; b++) cells.push([a, b]);
+  const hN = Math.floor(N / 2);
+  for (let a = -hN; a <= hN; a++) for (let b = -hN; b <= hN; b++) cells.push([a, b]);
   // الأقرب للمركز أولاً
   cells.sort((p, q) => (p[0] * p[0] + p[1] * p[1]) - (q[0] * q[0] + q[1] * q[1]) + (rnd() - 0.5) * 6);
   if (v.mosque) {
@@ -216,6 +231,8 @@ export function buildSettlement(terrain, v, seed) {
     if (terrain.isOnRoad(x, z, lot * 0.45)) continue;
     if (terrain.riverDist(x, z) < 20) continue;
     if (Math.hypot(x, z) < 160) continue;
+    if (anchors && anchors.some((a) => Math.hypot(x - a[0], z - a[1]) < 34)) continue;
+    if (blocksSight(x, z, anchors, 16)) continue;
     let w, d, floors;
     if (style === 'city') {
       const core = 1 - dist / v.r;
@@ -281,8 +298,13 @@ function olvCanopyGeo() {
 export function buildTrees(terrain, layout, quality, seed) {
   const rnd = mulberry32(seed);
   const maxOlive = quality === 'low' ? 900 : quality === 'high' ? 4200 : 2400;
+  const anchors = Object.values(layout.anchors || {});
+  const clear = (x, z, w = 28) => !blocksSight(x, z, anchors, w) && !anchors.some((a) => Math.hypot(x - a[0], z - a[1]) < 30);
+  // مخروط أمامي مفتوح نسبياً لرؤية الطرق
+  const frontCone = (x, z) => z < -150 && Math.abs(Math.atan2(x, -z)) < 0.45;
   const pts = [];
   for (const [x, z] of terrain.groveTrees || []) {
+    if (!clear(x, z)) continue;
     const d = Math.hypot(x, z);
     const keep = d < 900 ? 1 : d < 2000 ? 0.35 : 0.12;
     if (rnd() < keep && d > 40) pts.push([x, z, 'o']);
@@ -291,6 +313,7 @@ export function buildTrees(terrain, layout, quality, seed) {
   for (let k = 0; k < 500; k++) {
     const x = (rnd() - 0.5) * 6400, z = 600 - rnd() * 5800;
     if (Math.hypot(x, z) < 60 || terrain.isOnRoad(x, z, 6) || terrain.riverDist(x, z) < 6) continue;
+    if (!clear(x, z) || (frontCone(x, z) && rnd() < 0.7)) continue;
     pts.push([x, z, rnd() < 0.7 ? 'o' : 'c']);
   }
   // صفوف أشجار على الطرق
@@ -304,6 +327,7 @@ export function buildTrees(terrain, layout, quality, seed) {
       for (const sgn of [-1, 1]) {
         const x = p[0] - dz / l * side * sgn, z = p[1] + dx / l * side * sgn;
         if (Math.hypot(x, z) < 80 || terrain.riverDist(x, z) < 6) continue;
+        if (!clear(x, z, 40) || (frontCone(x, z) && rnd() < 0.75)) continue;
         pts.push([x, z, 'e']);
       }
     }
@@ -450,17 +474,17 @@ export function buildPlayerPosition(terrain) {
   const B = new GeoBuilder();
   const y0 = terrain.heightAt(0, 0);
   const rnd = mulberry32(3);
-  const bag = new THREE.CapsuleGeometry(0.17, 0.42, 3, 6);
+  const bag = new THREE.CapsuleGeometry(0.16, 0.4, 4, 10);
   bag.rotateZ(Math.PI / 2);
-  bag.scale(1, 0.75, 1.25);
+  bag.scale(1, 0.62, 1.2);
   for (let row = 0; row < 3; row++) {
     const R = 2.9;
     const n = 26;
     for (let k = 0; k < n; k++) {
       const a = -1.25 + (k + (row % 2) * 0.5) / n * 2.5;
       const x = Math.sin(a) * R, z = -Math.cos(a) * R;
-      const y = terrain.heightAt(x, z) + 0.12 + row * 0.24;
-      const c = new THREE.Color().setHSL(0.1 + rnd() * 0.03, 0.25 + rnd() * 0.1, 0.42 + rnd() * 0.1);
+      const y = terrain.heightAt(x, z) + 0.1 + row * 0.2;
+      const c = new THREE.Color().setHSL(0.09 + rnd() * 0.04, 0.18 + rnd() * 0.12, 0.28 + rnd() * 0.12);
       B.geom(bag, mat4(x, y, z, -a + Math.PI / 2 + (rnd() - 0.5) * 0.2), c);
     }
   }
@@ -495,7 +519,9 @@ export function buildLandmark(terrain, lm, ctx) {
       g.translate(0, 0, -len / 2);
       B.geom(g, mat4(x, H(x, z) - 0.6, z, rot), '#8c6f52');
     };
-    berm(lm.x, lm.z + d / 2, w, Math.PI / 2);
+    // الساتر الأمامي مخترق (جهة المهاجمين) — نبقي جزأين جانبيين قصيرين
+    berm(lm.x - w * 0.38, lm.z + d / 2, w * 0.24, Math.PI / 2);
+    berm(lm.x + w * 0.38, lm.z + d / 2, w * 0.24, Math.PI / 2);
     berm(lm.x, lm.z - d / 2, w, Math.PI / 2);
     berm(lm.x - w / 2, lm.z, d, 0);
     berm(lm.x + w / 2, lm.z, d, 0);
@@ -721,10 +747,11 @@ export function buildLandmark(terrain, lm, ctx) {
     const pos = new Float32Array(n * 3), col = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) {
       const x = lm.x + (rnd() - 0.5) * lm.w * (0.4 + rnd() * 0.6);
-      const z = lm.z + (rnd() - 0.5) * 900 * rnd();
-      let y = lm.on === 'mountain' ? H(x, z - 800 * rnd()) + 3 : 2 + rnd() * 20;
+      const z0 = lm.z + (rnd() - 0.5) * 900 * rnd();
+      const z = lm.on === 'mountain' ? z0 - 800 * rnd() : z0;
+      let y = lm.on === 'mountain' ? H(x, z) + 3 : 2 + rnd() * 20;
       if (lm.on !== 'mountain' && z < terrain.bounds.minZ + 50) y = 6 + rnd() * 30;
-      pos[i * 3] = x; pos[i * 3 + 1] = y; pos[i * 3 + 2] = lm.on === 'mountain' ? z - 800 * rnd() : z;
+      pos[i * 3] = x; pos[i * 3 + 1] = y; pos[i * 3 + 2] = z;
       const warm = rnd();
       col[i * 3] = 1; col[i * 3 + 1] = 0.65 + warm * 0.3; col[i * 3 + 2] = 0.35 + warm * 0.4;
     }
@@ -785,7 +812,10 @@ export function buildBridges(terrain) {
       const len = Math.hypot(q[0] - p[0], q[1] - p[1]);
       const rot = Math.atan2(q[0] - p[0], q[1] - p[1]);
       B.box(mx, r.deck - 0.6, mz, r.w + 2, 1.2, len + 0.5, rot, new THREE.Color('#9d978b'), false);
-      B.box(mx, r.deck + 0.6, mz, 0.4, 1, len + 0.5, rot, new THREE.Color('#bdb6a8'), false);
+      for (const sd of [-1, 1]) {
+        const o = sd * (r.w / 2 + 0.8);
+        B.box(mx + Math.cos(rot) * o, r.deck + 0.6, mz - Math.sin(rot) * o, 0.4, 1, len + 0.5, rot, new THREE.Color('#bdb6a8'), false);
+      }
       if (k % 2 === 0) {
         const ground = terrain.heightAt(mx, mz);
         B.geom(new THREE.BoxGeometry(3, r.deck - ground + 2, 3), mat4(mx, (r.deck + ground) / 2 - 1, mz, rot), '#8a857b');

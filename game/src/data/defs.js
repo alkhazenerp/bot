@@ -32,9 +32,9 @@ export const FACTIONS = {
 
 // cls يحدد سلوك الذكاء الاصطناعي ونموذج الإصابة
 export const UNITS = {
-  t72: { name: 'دبابة T-72', cls: 'tank', model: 't72', hp: 100, speed: 8, reward: 150, faction: 'regime', weapon: 'cannon', turretToss: 0.65, armor: { front: 0.8, side: 1.15, rear: 1.4, top: 1.6 } },
-  t90: { name: 'دبابة T-90 قيادية', cls: 'tank', model: 't90', hp: 175, speed: 8, reward: 320, faction: 'regime', weapon: 'cannon', turretToss: 0.5, shtora: true, armor: { front: 0.7, side: 1.1, rear: 1.4, top: 1.8 } },
-  t55: { name: 'دبابة T-55', cls: 'tank', model: 't55', hp: 80, speed: 7, reward: 110, faction: 'regime', weapon: 'cannon', turretToss: 0.7, armor: { front: 0.9, side: 1.2, rear: 1.4, top: 1.6 } },
+  t72: { name: 'دبابة T-72', cls: 'tank', model: 't72', hp: 100, speed: 8, reward: 150, faction: 'regime', weapon: 'cannon', turretToss: 0.65, armor: { front: 1.0, side: 1.25, rear: 1.5, top: 1.6 } },
+  t90: { name: 'دبابة T-90 قيادية', cls: 'tank', model: 't90', hp: 175, speed: 8, reward: 320, faction: 'regime', weapon: 'cannon', turretToss: 0.5, shtora: true, armor: { front: 0.6, side: 1.8, rear: 2.0, top: 2.0 } },
+  t55: { name: 'دبابة T-55', cls: 'tank', model: 't55', hp: 80, speed: 7, reward: 110, faction: 'regime', weapon: 'cannon', turretToss: 0.7, armor: { front: 1.0, side: 1.2, rear: 1.4, top: 1.6 } },
   bmp1: { name: 'مدرعة BMP-1', cls: 'ifv', model: 'bmp1', hp: 65, speed: 10, reward: 100, faction: 'regime', weapon: 'gun73', atgm: true, armor: { front: 1, side: 1.2, rear: 1.3, top: 1.5 } },
   bmp2: { name: 'مدرعة BMP-2', cls: 'ifv', model: 'bmp2', hp: 70, speed: 10, reward: 120, faction: 'regime', weapon: 'autocannon', atgm: true, armor: { front: 1, side: 1.2, rear: 1.3, top: 1.5 } },
   ural: { name: 'شاحنة ذخيرة', cls: 'truck', model: 'ural', hp: 35, speed: 12, reward: 70, faction: 'regime', weapon: null, explosive: true, armor: { front: 1.3, side: 1.3, rear: 1.3, top: 1.3 } },
@@ -44,7 +44,7 @@ export const UNITS = {
   grad: { name: 'راجمة غراد BM-21', cls: 'artillery', model: 'grad', hp: 45, speed: 10, reward: 220, faction: 'regime', weapon: 'grad', explosive: true, armor: { front: 1.3, side: 1.3, rear: 1.3, top: 1.3 } },
   bunker: { name: 'دشمة رشاش', cls: 'static', model: 'bunker', hp: 60, reward: 80, faction: 'regime', weapon: 'dshk', armor: { front: 1, side: 1, rear: 1, top: 1 } },
   checkpoint: { name: 'حاجز عسكري', cls: 'static', model: 'checkpoint', hp: 80, reward: 120, faction: 'regime', weapon: 'pkm', armor: { front: 1, side: 1, rear: 1, top: 1 } },
-  depot: { name: 'مستودع ذخيرة', cls: 'static', model: 'depot', hp: 110, reward: 450, faction: 'regime', weapon: null, explosive: true, armor: { front: 1, side: 1, rear: 1, top: 1.2 } },
+  depot: { name: 'مستودع ذخيرة', cls: 'static', model: 'depot', hp: 95, reward: 450, faction: 'regime', weapon: null, explosive: true, armor: { front: 1, side: 1, rear: 1, top: 1.2 } },
   buk: { name: 'منظومة دفاع جوي', cls: 'static', model: 'buk', hp: 90, reward: 380, faction: 'russia', weapon: 'sam', explosive: true, armor: { front: 1, side: 1.2, rear: 1.3, top: 1.4 } },
   atgm: { name: 'فريق صواريخ كونكورس', cls: 'static', model: 'atgmteam', hp: 20, reward: 140, faction: 'iran', weapon: 'atgm', armor: { front: 1.5, side: 1.5, rear: 1.5, top: 1.5 } },
   infantry: { name: 'عنصر ميليشيا', cls: 'infantry', model: 'militia', hp: 10, speed: 2.2, reward: 15, faction: 'iran', weapon: 'rifle', armor: { front: 1, side: 1, rear: 1, top: 1 } },
