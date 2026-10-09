@@ -375,7 +375,8 @@ class App {
     const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
     const file = new File([blob], `rada3-replay.${ext}`, { type: blob.type });
     const url = URL.createObjectURL(blob);
-    const canShare = navigator.canShare && navigator.canShare({ files: [file] });
+    const bridge = window.AndroidBridge;
+    const canShare = !!bridge || (navigator.canShare && navigator.canShare({ files: [file] }));
     this.ui.modal(`<h3>فيديو اللقطة جاهز</h3>
       <video src="${url}" controls playsinline style="width:100%;max-height:40vh;background:#000"></video>
       <p class="muted">${canShare ? 'اضغط «مشاركة» واختر واتساب.' : 'احفظ الفيديو ثم أرسله عبر واتساب.'} ${ext === 'webm' ? 'ملاحظة: بعض نسخ واتساب لا تعرض webm.' : ''}</p>
@@ -393,7 +394,15 @@ class App {
         }).catch(() => {});
       }
       const sh = card.querySelector('#v-share');
-      if (sh) sh.onclick = async () => {
+      // داخل تطبيق أندرويد: نمرّر الفيديو للتطبيق ليفتح قائمة المشاركة (واتساب)
+      if (bridge) {
+        sh.onclick = () => {
+          const fr = new FileReader();
+          fr.onload = () => { try { bridge.shareFile(String(fr.result).split(',')[1], blob.type, `rada3-replay.${ext}`); } catch (e) { this.ui.toast('تعذّرت المشاركة'); } };
+          fr.readAsDataURL(blob);
+        };
+        save.style.display = 'none';
+      } else if (sh) sh.onclick = async () => {
         try { await navigator.share({ files: [file], title: 'ردع العدوان', text: `لقطة من لعبة ردع العدوان ${Shop.shareUrl()}` }); } catch (e) { /* أُلغي */ }
       };
       card.querySelector('#v-close').onclick = close;

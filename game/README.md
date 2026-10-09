@@ -23,6 +23,23 @@ npm run build              # ينتج dist/rada3.html
 node build.mjs --artifact  # نسخة لصفحات Claude Artifacts
 ```
 
+### تطبيق أندرويد (APK)
+
+```bash
+cd game
+npm install
+./android/build-apk.sh     # ينتج dist/rada3.apk
+```
+
+لا يحتاج Android Studio: يكفي JDK 17+ وNode. ينزّل السكربت أدواته أول مرة (apktool وdx وandroid.jar وuber-apk-signer) إلى `android/.tools`.
+
+- التطبيق غلاف WebView يحمّل نسخة الملف الواحد من داخله، فيعمل دون إنترنت.
+- يعمل بالوضع الأفقي وبملء الشاشة، والجيروسكوب متاح فيه مباشرة.
+- زر الرجوع: يغلق النوافذ، يوقف اللعب ويستأنفه، يُنهي اللقطة، ويعود للقائمة.
+- روابط واتساب تُفتح في تطبيق واتساب، وفيديو اللقطة يُشارك عبر قائمة المشاركة في النظام.
+- التوقيع الافتراضي بمفتاح debug ثابت. للنشر بمفتاحك: `KEYSTORE=my.jks KS_ALIAS=rada3 KS_PASS=… ./android/build-apk.sh`
+- لرفع رقم الإصدار عدّل `versionCode` و`versionName` في `android/app/apktool.yml`.
+
 ### النشر على GitHub Pages
 
 فعّل Pages للمستودع واختر المجلد الجذر، ثم افتح `https://<user>.github.io/<repo>/game/`. ضع الرابط في `shareUrl` داخل `src/config.js` ليظهر في رسائل المشاركة.
