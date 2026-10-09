@@ -86,5 +86,12 @@ export const Save = {
     this.save();
     return res.gold * mult;
   },
-  reset() { const u = this.data.uuid; this.data = DEFAULTS(); this.data.uuid = u; this.save(); },
+  reset() {
+    // مسح التقدم مع إبقاء الإعدادات (ونفس الكائن المشترك مع اللعبة)
+    const u = this.data.uuid, s = this.data.settings;
+    this.data = DEFAULTS();
+    this.data.uuid = u;
+    this.data.settings = s;
+    this.save();
+  },
 };

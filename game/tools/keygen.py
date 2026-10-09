@@ -8,6 +8,7 @@
     python3 keygen.py 3f2c...-...  gold_5k 1
 
 المنتجات المتاحة: gold_5k, gold_25k, tow2b, unlock_all, vip, skin_gold
+لطلبات الإهداء أضف ‎@gift إلى رمز المنتج واستخدم رقم الطلب المذكور في الرسالة (1000-9999)
 يجب أن يطابق SECRET قيمة shopSecret في src/config.js
 """
 import sys
@@ -53,7 +54,7 @@ def main(argv):
         return 1
     uuid, item = args[0], args[1]
     order = int(args[2]) if len(args) > 2 else 1
-    if item not in ITEMS:
+    if item.replace("@gift", "") not in ITEMS:
         print(f"تحذير: المنتج {item} غير معروف. المتاح: {', '.join(ITEMS)}")
     print(make_code(uuid, item, order, secret))
     return 0

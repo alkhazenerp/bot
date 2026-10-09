@@ -202,7 +202,7 @@ a.btn { text-decoration: none; }
 #toast { position: absolute; bottom: calc(132px + var(--safe-b)); left: 50%; transform: translateX(-50%); background: rgba(8,10,8,0.7); padding: 5px 14px; font-size: 14px; opacity: 0; transition: opacity .2s; white-space: nowrap; max-width: 92vw; overflow: hidden; text-overflow: ellipsis; }
 #toast.show { opacity: 1; }
 
-.hud-bottom { position: absolute; left: calc(10px + var(--safe-l)); right: calc(10px + var(--safe-r)); bottom: calc(10px + var(--safe-b)); display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; }
+.hud-bottom { direction: ltr; position: absolute; left: calc(10px + var(--safe-l)); right: calc(10px + var(--safe-r)); bottom: calc(10px + var(--safe-b)); display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; }
 .left-ctrls, .right-ctrls { display: flex; align-items: flex-end; gap: 8px; }
 .right-ctrls { flex-direction: row; }
 .center-ctrls { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; min-width: 0; }
@@ -210,7 +210,8 @@ a.btn { text-decoration: none; }
 #wstatus { font-family: var(--f-mono); color: var(--white); min-width: 64px; text-align: center; }
 .reload { width: 120px; height: 4px; background: rgba(255,255,255,0.15); }
 .reload i { display: block; height: 100%; width: 100%; background: var(--brass); }
-#weapon-bar { display: flex; gap: 4px; }
+#weapon-bar { display: flex; gap: 4px; max-width: 100%; direction: rtl; }
+.wbtn { min-width: 0; flex: 0 1 62px; }
 .wbtn { position: relative; width: 62px; height: 58px; background: rgba(8,10,8,0.55); border: 1px solid rgba(255,255,255,0.18); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px; color: var(--sand); }
 .wbtn svg { width: 26px; height: 26px; color: var(--sand); }
 .wbtn .wname { font-size: 11px; line-height: 1.2; }
@@ -226,7 +227,7 @@ a.btn { text-decoration: none; }
 .fire.pressed { transform: scale(0.93); background: radial-gradient(circle at 50% 40%, rgba(255,90,70,0.95), rgba(170,30,20,0.95)); }
 .stick { width: 118px; height: 118px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); background: rgba(8,10,8,0.3); position: relative; display: none; }
 #stick-knob { position: absolute; inset: 34px; border-radius: 50%; background: rgba(240,235,215,0.55); }
-.dpad { display: none; grid-template-areas: ". up ." "left . right" ". down ."; grid-template-columns: 44px 44px 44px; grid-template-rows: 44px 44px 44px; }
+.dpad { direction: ltr; display: none; grid-template-areas: ". up ." "left . right" ". down ."; grid-template-columns: 44px 44px 44px; grid-template-rows: 44px 44px 44px; }
 .dpad button { background: rgba(8,10,8,0.55); border: 1px solid rgba(255,255,255,0.25); color: var(--sand); font-size: 16px; }
 .dpad [data-a="up"] { grid-area: up; } .dpad [data-a="down"] { grid-area: down; } .dpad [data-a="left"] { grid-area: left; } .dpad [data-a="right"] { grid-area: right; }
 .dpad button.pressed { background: rgba(224,164,58,0.45); }
@@ -242,7 +243,7 @@ a.btn { text-decoration: none; }
   .hbtn { height: 42px; min-width: 54px; }
   .stick { width: 100px; height: 100px; }
   #stick-knob { inset: 28px; }
-  .obj-panel { max-width: 38vw; font-size: 12px; }
+  .obj-panel { max-width: 33vw; font-size: 12px; }
   #obj-list { font-size: 12px; }
   #radio { bottom: calc(118px + var(--safe-b)); }
   #toast { bottom: calc(100px + var(--safe-b)); }

@@ -324,7 +324,7 @@ export class HUD {
     const pl = world.player;
     const yawDeg = (pl.activeDrone ? pl.activeDrone.yaw : pl.yaw) / DEG;
     const head = ((this.north + yawDeg) % 360 + 360) % 360;
-    const cw = Math.min(420, W * 0.5), cx = W / 2, y = 14 + (window.visualViewport ? 0 : 0);
+    const cw = Math.min(420, Math.max(170, W - 470)), cx = W / 2, y = 14 + (window.visualViewport ? 0 : 0);
     const pxPerDeg = cw / 100;
     g.save();
     g.beginPath(); g.rect(cx - cw / 2, y - 4, cw, 34); g.clip();

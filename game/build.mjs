@@ -8,7 +8,7 @@ import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
 const artifact = process.argv.includes('--artifact');
-const threeDir = path.dirname(require.resolve('three/package.json'));
+const threeDir = path.resolve(path.dirname(require.resolve('three')), '..');
 
 const res = await build({
   entryPoints: ['src/main.js'],

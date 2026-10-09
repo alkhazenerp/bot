@@ -283,7 +283,7 @@ export class MissionRunner {
       if (o.type === 'kill') { done = val >= o.count; txt = `${o.text} (${Math.min(val, o.count)}/${o.count})`; }
       else if (o.type === 'tag' || o.type === 'tagAir' || o.type === 'hvt' || o.type === 'escort') { done = val >= o.count; txt = `${o.text} (${Math.min(val, o.count)}/${o.count})`; }
       else if (o.type === 'noescape') { done = true; txt = `${o.text} (${val}/${this.maxEscapes})`; }
-      else if (o.type === 'killAll') { done = this._allWavesDone() && this._enemiesAlive() === 0; txt = `${o.text} (${this.waves.filter((w) => w.spawned).length}/${this.waves.length})`; }
+      else if (o.type === 'killAll') { done = this._allWavesDone() && this.waves.every((w) => (w.ents || []).every((e) => !e.alive)); txt = `${o.text} (${this.waves.filter((w) => w.spawned).length}/${this.waves.length})`; }
       return { text: txt, done, fail: o.fail };
     });
   }

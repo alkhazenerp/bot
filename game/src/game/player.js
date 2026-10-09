@@ -217,7 +217,11 @@ export class Player {
     this.coverK = damp(this.coverK, this.inCover ? 1 : 0, 7, dt);
 
     if (input.zoomPressed && !this.activeDrone) this.cycleZoom(1);
-    if (input.zoomOut && !this.activeDrone) this.cycleZoom(-1);
+    if (!this.activeDrone && (input.zoomIn || input.zoomOut)) {
+      const n = this.zoomLevels.length;
+      const z = Math.max(0, Math.min(n - 1, this.zoomIdx + (input.zoomIn ? 1 : -1)));
+      if (z !== this.zoomIdx) { this.zoomIdx = z; this.world.audio.click(); }
+    }
     if (input.weaponSel) this.setWeapon(input.weaponSel);
     if (input.nextWeapon) {
       const i = this.weapons.indexOf(this.weapon);

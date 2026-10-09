@@ -304,7 +304,16 @@ export class IglaMissile {
       w.onPlayerMiss('igla');
       return false;
     }
-    if (!this.decoy && tg && tg.alive && this.pos.distanceTo(tg.center(_v2)) < 7) {
+    // صمام تقاربي على طول مسار الإطار كله (السرعة 620 م/ث تقفز فوق كرة صغيرة)
+    let near = false;
+    if (!this.decoy && tg && tg.alive) {
+      const c = tg.center(_v2);
+      const seg = _v3.copy(this.pos).sub(this.prev);
+      const L2 = seg.lengthSq() || 1;
+      const k = clamp(_v.copy(c).sub(this.prev).dot(seg) / L2, 0, 1);
+      near = this.prev.clone().addScaledVector(seg, k).distanceTo(c) < 8;
+    }
+    if (near) {
       w.fx.airBurst(this.pos.clone(), { size: 0.7 });
       const killed = tg.takeDamage(110, { side: 'side', part: 'hull', source: 'igla', distance: this.pos.length() });
       w.onPlayerHit(tg, { source: 'igla', killed, distance: this.pos.length() });
@@ -315,7 +324,8 @@ export class IglaMissile {
     if (hit || this.t > 14) {
       w.fx.explosion(hit ? hit.point : this.pos.clone(), { size: 0.5, kind: hit ? 'he' : 'air' });
       if (hit && hit.entity && hit.entity.alive) {
-        const killed = hit.entity.takeDamage(60, { side: hit.side, source: 'igla' });
+        const air = hit.entity.cls === 'heli' || hit.entity.cls === 'jet' || hit.entity.cls === 'drone';
+        const killed = hit.entity.takeDamage(air ? 110 : 60, { side: hit.side, source: 'igla' });
         w.onPlayerHit(hit.entity, { source: 'igla', killed, distance: this.pos.length() });
       } else w.onPlayerMiss('igla');
       this.alive = false; w.remove(this.obj);

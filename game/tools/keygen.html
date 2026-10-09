@@ -33,6 +33,7 @@
       <option value="skin_gold">قاذف ذهبي (skin_gold)</option>
     </select>
   </label>
+  <label><span><input id="gift" type="checkbox"> طلب إهداء (رمز المنتج ينتهي بـ ‎@gift)</span></label>
   <label>رقم الطلب<input id="order" type="number" min="1" value="1"></label>
   <label>المفتاح السري (shopSecret)<input id="secret" value="RADA-2024-12-08-TOW"></label>
   <button id="go">توليد الكود</button>
@@ -46,12 +47,13 @@
   $('uuid').addEventListener('input', () => {
     const v = $('uuid').value;
     const u = v.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
-    const it = v.match(/\((gold_5k|gold_25k|tow2b|unlock_all|vip|skin_gold)\)/);
+    const it = v.match(/\((gold_5k|gold_25k|tow2b|unlock_all|vip|skin_gold)(@gift)?\)/);
     const o = v.match(/رقم الطلب:\s*(\d+)/);
-    if (u && v.length > 40) { $('uuid').value = u[0]; if (it) $('item').value = it[1]; if (o) $('order').value = o[1]; }
+    if (u && v.length > 40) { $('uuid').value = u[0]; if (it) { $('item').value = it[1]; $('gift').checked = !!it[2]; } if (o) $('order').value = o[1]; }
   });
   $('go').onclick = () => {
-    const code = makeCode($('uuid').value, $('item').value, parseInt($('order').value || '1', 10), $('secret').value);
+    const item = $('item').value + ($('gift').checked ? '@gift' : '');
+    const code = makeCode($('uuid').value, item, parseInt($('order').value || '1', 10), $('secret').value);
     $('out').textContent = code;
     $('msg').textContent = `شكراً لشرائك من ردع العدوان 🎯\nكود التفعيل: ${code}\nافتح: المتجر ← مميز ← أدخل الكود ← تفعيل`;
   };

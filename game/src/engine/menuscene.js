@@ -104,8 +104,8 @@ export class MenuScene {
     this.t += dt;
     const t = this.t;
     const sway = Math.sin(t * 0.07);
-    this.camera.position.set(3.6 + sway * 0.9, this.terrain.heightAt(3, 2) + 2.2 + Math.sin(t * 0.13) * 0.15, 3.2 - sway * 0.4);
-    this.camera.lookAt(-10 + sway * 6, 1.5, -60);
+    this.camera.position.set(2.4 + sway * 0.8, this.terrain.heightAt(2, 6) + 2.5 + Math.sin(t * 0.13) * 0.15, 6.2 - sway * 0.4);
+    this.camera.lookAt(-2 + sway * 5, 1.1, -34);
     for (const [i, w] of this.wrecks.entries()) this.fx.burn(w, { dt, power: 1.2, key: `m${i}`, radius: 1.2 });
     // آلية تتحرك في البعيد وانفجارات متفرقة
     const mv = this.moving.root;

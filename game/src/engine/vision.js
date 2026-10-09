@@ -94,9 +94,9 @@ export class Vision {
       if (this.mode === 'day') {
         this.saved = { bg: scene.background, fog: scene.fog ? scene.fog.color.clone() : null, envI: scene.environmentIntensity, env: scene.environment };
         if (env) {
-          env.sky.visible = false;
+          env.group.traverse((o) => { if (o.userData.isSky) o.visible = false; });
           this.saved.sunI = env.sun.intensity; this.saved.hemiI = env.hemi.intensity;
-          env.sun.intensity = 0.25; env.hemi.intensity = 0.35;
+          env.sun.intensity = 0.08; env.hemi.intensity = 0.14;
           env.hemi.color.set(0xffffff); env.hemi.groundColor.set(0x444444);
         }
         scene.background = new THREE.Color(0.05, 0.05, 0.05);
@@ -114,7 +114,7 @@ export class Vision {
         if (scene.fog && this.saved.fog) scene.fog.color.copy(this.saved.fog);
         scene.environment = this.saved.env;
         if (env) {
-          env.sky.visible = true;
+          env.group.traverse((o) => { if (o.userData.isSky) o.visible = true; });
           env.sun.intensity = this.saved.sunI; env.hemi.intensity = this.saved.hemiI;
           env.hemi.color.set(env.t.hemiSky); env.hemi.groundColor.set(env.t.hemiGround);
         }

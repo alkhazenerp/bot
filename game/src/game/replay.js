@@ -122,6 +122,20 @@ export class ReplayDirector {
       w.vision.restore(o);
       o.visible = false;
     }
+    // إخفاء ما لم يكن موجوداً في اللقطة (وحدات ظهرت لاحقاً، هياكل لاحقة)
+    this.hidden = [];
+    const inClip = new Set([...this.clip.objs.values()].map((r) => r.obj));
+    for (const [, r] of w.recorder.objs) {
+      const o = r.obj;
+      if (inClip.has(o) || !o.parent || !o.visible) continue;
+      this.hidden.push(o);
+      o.visible = false;
+    }
+    for (const e of w.entities) {
+      if (inClip.has(e.root) || !e.root.parent || !e.root.visible) continue;
+      this.hidden.push(e.root);
+      e.root.visible = false;
+    }
     w.fx.clear();
     w.fx.replaying = true;
     w.recorder.enabled = false;
@@ -144,6 +158,7 @@ export class ReplayDirector {
       o.visible = s.vis;
       if (s.entity) s.entity.setWrecked(s.wreck);
     }
+    for (const o of this.hidden || []) o.visible = true;
     w.fx.clear();
     w.fx.replaying = false;
     w.recorder.enabled = true;

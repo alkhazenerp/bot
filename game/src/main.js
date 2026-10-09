@@ -55,6 +55,11 @@ class App {
     this._resize();
     window.addEventListener('resize', () => this._resize());
     document.addEventListener('visibilitychange', () => { if (document.hidden && this.state === 'play') this.pause(); });
+    window.addEventListener('keydown', (e) => {
+      if (this.state === 'pause' && (e.code === 'Escape' || e.code === 'KeyP') && this.ui.current === 'pause') { e.preventDefault(); this.resume(); }
+      else if (this.state === 'replay' && (e.code === 'Escape' || e.code === 'Space')) { e.preventDefault(); this.endReplay(); }
+    });
+    this.input.onLockLost = () => { if (this.state === 'play') this.pause(); };
     const first = () => {
       this.audio.init();
       this.audio.setVolume(this.settings.volume);
@@ -157,7 +162,16 @@ class App {
     world.camera.updateProjectionMatrix();
     this.hud.attach(world, f.region);
     world.events.on('end', (e) => this._onEnd(e));
-    world.events.on('clip', () => { if (this.settings.autoReplay) { this.quickReplayT = 8; $('btn-replay-quick').hidden = false; } });
+    world.events.on('clip', () => {
+      if (this.state === 'end' && this.lastResult) {
+        // وصلت لقطة جديدة بعد ظهور شاشة النتيجة: حدّث الأزرار
+        this.lastResult.hasClip = true;
+        this.lastResult.hasBest = !!world.bestClip && world.bestClip !== world.lastClip;
+        if (this.ui.current === 'end') this.ui.showEnd(this.lastResult);
+        return;
+      }
+      if (this.settings.autoReplay && this.state === 'play') { this.quickReplayT = 8; $('btn-replay-quick').hidden = false; }
+    });
     world.events.on('drone', (d2) => {
       this.post.u.uDrone.value = d2.on ? 1 : 0;
       if (!d2.on) { this.post.u.uStatic.value = 1; }
@@ -213,6 +227,7 @@ class App {
     this.audio.lockTone(-1);
     if (this.audio.ctx) this.audio.ctx.suspend();
     $('p-replay').hidden = !(this.world && (this.world.lastClip || this.world.bestClip));
+    $('hud').hidden = true;
     this.ui.show('pause');
   }
 
@@ -220,6 +235,8 @@ class App {
     if (this.state !== 'pause') return;
     if (this.audio.ctx) this.audio.ctx.resume();
     this.ui.hideAll();
+    $('hud').hidden = false;
+    this.input.resetToggles();
     this.state = 'play';
     this.input.enabled = true;
     this.last = performance.now();
@@ -244,17 +261,20 @@ class App {
   }
 
   _onEnd(e) {
-    // أكمل المشهد قليلاً قبل شاشة النتيجة
-    this.endT = 2.6;
+    // أكمل المشهد قليلاً قبل شاشة النتيجة (بعد تجهيز لقطة الإصابة الأخيرة)
+    this.endT = 4.2;
     this.endInfo = e;
+    // حفظ النتيجة فوراً كي لا تضيع إن انسحب اللاعب قبل ظهور الشاشة
+    this.endRes = this.mission.results();
+    this.endGained = Save.recordResult(this.cur.mid, this.cur.diff, this.endRes, this.cur.ri, this.cur.mi);
     this.hud.center(e.success ? 'تمّت المهمة' : 'فشلت المهمة', e.success ? 'الله أكبر' : '', 2.4);
     if (e.success) this.audio.say('تمت المهمة. الله أكبر');
   }
 
   _showEnd() {
     const e = this.endInfo;
-    const res = this.mission.results();
-    const gained = Save.recordResult(this.cur.mid, this.cur.diff, res, this.cur.ri, this.cur.mi);
+    const res = this.endRes;
+    const gained = this.endGained;
     this.state = 'end';
     $('hud').hidden = true;
     this.input.enabled = false;
@@ -279,7 +299,7 @@ class App {
   playClip(clip, record = false) {
     if (!clip || !this.world) { this.ui.toast('لا توجد لقطة بعد — دمّر هدفاً أولاً'); return; }
     if (this.replay) this.endReplay(true);
-    this.replayFrom = this.state;
+    if (this.state !== 'replay') this.replayFrom = this.state;
     if (this.state === 'pause' && this.audio.ctx) this.audio.ctx.resume();
     this.state = 'replay';
     this.input.enabled = false;
@@ -294,7 +314,8 @@ class App {
     this.savedVision = this.world.vision.mode;
     if (this.savedVision !== 'day') { this.world.setVision('day'); this.post.u.uThermal.value = 0; }
     this.post.u.uDrone.value = 0;
-    this.replay = new ReplayDirector(this.world, clip, { onEnd: () => setTimeout(() => this.endReplay(), 700) });
+    const rp = new ReplayDirector(this.world, clip, { onEnd: () => setTimeout(() => { if (this.replay === rp) this.endReplay(); }, 700) });
+    this.replay = rp;
     this.replay.start();
     this.replay.cam.aspect = window.innerWidth / window.innerHeight;
     this.replay.cam.updateProjectionMatrix();
@@ -316,7 +337,7 @@ class App {
     const from = this.replayFrom;
     if (from === 'end') { this.state = 'end'; this.ui.show('end'); }
     else if (from === 'pause') { this.state = 'pause'; this.ui.show('pause'); if (this.audio.ctx) this.audio.ctx.suspend(); }
-    else { this.state = 'play'; $('hud').hidden = false; this.input.enabled = true; this.last = performance.now(); }
+    else { this.state = 'play'; $('hud').hidden = false; this.input.resetToggles(); this.input.enabled = true; this.last = performance.now(); }
   }
 
   _canRecord() {

@@ -31,7 +31,8 @@ export class Environment {
 
     // الشمس
     const phi = THREE.MathUtils.degToRad(90 - this.t.elev);
-    const theta = THREE.MathUtils.degToRad(this.t.azim - north);
+    // نفس اصطلاح البوصلة: الاتجاه مقاس من -Z مع عقارب الساعة
+    const theta = THREE.MathUtils.degToRad(180 - (this.t.azim - north));
     this.sunDir = new THREE.Vector3().setFromSphericalCoords(1, phi, theta);
     const lightDir = this.night ? new THREE.Vector3().setFromSphericalCoords(1, THREE.MathUtils.degToRad(50), theta + 2.2) : this.sunDir.clone();
     if (lightDir.y < 0.05) lightDir.y = 0.05;

@@ -110,7 +110,7 @@ export class UI {
     $('map-gold').textContent = fmtInt(Save.data.gold);
     let last = 0;
     REGIONS.forEach((r, i) => { if (Save.regionUnlocked(i)) last = i; });
-    if (!Save.regionUnlocked(this.sel.region)) this.sel.region = last;
+    if (!Save.regionUnlocked(this.sel.region)) { this.sel.region = last; this.sel.mission = null; }
     this._drawMap();
     this._panel();
     this.show('map');
@@ -169,6 +169,7 @@ export class UI {
     const ri = this.sel.region;
     const r = REGIONS[ri];
     const diff = this.sel.diff;
+    if (this.sel.mission && !r.missions.some((m) => m.id === this.sel.mission)) this.sel.mission = null;
     if (!this.sel.mission) {
       const firstOpen = r.missions.findIndex((m, mi) => Save.missionUnlocked(ri, mi) && !Save.starsFor(m.id, diff));
       this.sel.mission = r.missions[Math.max(0, firstOpen)].id;
@@ -356,7 +357,7 @@ export class UI {
         <p>1) اختر المنتج واضغط «اطلب عبر واتساب» — تُرسل رسالة فيها معرّف جهازك ورقم الطلب.<br>2) بعد الدفع يصلك كود تفعيل خاص بجهازك.<br>3) أدخل الكود هنا. ${num ? '' : '<br><b style="color:#f3c97d">ملاحظة: لم يُضبط رقم البائع بعد — ستختار جهة الاتصال يدوياً في واتساب.</b>'}</p></div>
         <button class="btn small" id="copy-uuid">نسخ المعرّف</button>
         <div class="uuid-box" id="uuid-box" style="grid-column:1/-1">${esc(Save.uuid)}</div>
-        <div class="redeem"><input id="code-in" placeholder="XXXXX-XXXXX" maxlength="11" autocomplete="off" aria-label="كود التفعيل"><button class="btn primary small" id="code-go">تفعيل الكود</button></div>
+        <div class="redeem"><input id="code-in" placeholder="XXXXX-XXXXX" autocomplete="off" aria-label="كود التفعيل (يمكن لصق رسالة البائع كاملة)"><button class="btn primary small" id="code-go">تفعيل الكود</button></div>
       </div>`;
       for (const it of PREMIUM) {
         const own = !it.consumable && d.premium[it.id];

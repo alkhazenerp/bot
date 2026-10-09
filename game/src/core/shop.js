@@ -60,10 +60,12 @@ export const Shop = {
   orderLink(itemId, friendUuid = null) {
     const it = PREMIUM.find((x) => x.id === itemId);
     const target = friendUuid ? normalizeUuid(friendUuid) : Save.uuid;
-    const order = friendUuid ? 1 : this.orderNo(itemId);
+    // الهدية لها رقم عشوائي ونطاق أكواد مستقل كي لا تتعارض مع مشتريات الصديق نفسه
+    const order = friendUuid ? 1000 + Math.floor(Math.random() * 9000) : this.orderNo(itemId);
+    const key = friendUuid ? `${itemId}@gift` : itemId;
     const lines = [
       friendUuid ? '🎁 طلب إهداء من لعبة ردع العدوان' : '🛒 طلب شراء من لعبة ردع العدوان',
-      `المنتج: ${it ? it.name : itemId} (${itemId})`,
+      `المنتج: ${it ? it.name : itemId} (${key})`,
       `السعر: ${it ? it.price : ''}`,
       `المعرّف: ${target}`,
       `رقم الطلب: ${order}`,
@@ -74,29 +76,39 @@ export const Shop = {
     return { url: `https://wa.me/${num}?text=${encodeURIComponent(text)}`, text, number: num };
   },
 
-  // التحقق من كود التفعيل ومنح المنتج
+  // التحقق من كود التفعيل ومنح المنتج (يقبل لصق رسالة البائع كاملة)
   redeem(code) {
-    const c = cleanCode(code);
+    const m = String(code || '').toUpperCase().match(/[A-HJ-NP-Z2-9]{5}-?[A-HJ-NP-Z2-9]{5}/);
+    const c = cleanCode(m ? m[0] : code);
     const d = Save.data;
     if (c.length !== 10) return { ok: false, msg: 'الكود يتكون من 10 أحرف (XXXXX-XXXXX)' };
     if (d.redeemed.includes(c)) return { ok: false, msg: 'هذا الكود مستخدم مسبقاً' };
+    const grant = (it, n, gift) => {
+      if (!it.consumable && d.premium[it.id]) return { ok: false, msg: 'تملك هذا المنتج بالفعل' };
+      d.redeemed.push(c);
+      if (it.consumable) {
+        d.gold += it.gold || 0;
+        if (!gift) d.orders[it.id] = Math.max(this.orderNo(it.id), n) + 1;
+      } else {
+        d.premium[it.id] = true;
+        if (it.id === 'unlock_all') d.unlocked = 99;
+        if (it.id === 'skin_gold') { if (!d.skins.includes('gold')) d.skins.push('gold'); d.skin = 'gold'; }
+      }
+      Save.save();
+      return { ok: true, msg: `تم التفعيل${gift ? ' (هدية)' : ''}: ${it.name}${it.gold ? ` (+${fmtInt(it.gold)} ذهب)` : ''}`, item: it };
+    };
+    // مشتريات الجهاز نفسه: أرقام الطلب الحالية والسابقة القريبة
     for (const it of PREMIUM) {
-      // نجرب رقم الطلب الحالي ورقم هدية الصديق (1)
-      const nums = [...new Set([this.orderNo(it.id), 1])];
-      for (const n of nums) {
-        if (!verifyCode(c, Save.uuid, it.id, n, CONFIG.shopSecret)) continue;
-        if (!it.consumable && d.premium[it.id]) return { ok: false, msg: 'تملك هذا المنتج بالفعل' };
-        d.redeemed.push(c);
-        if (it.consumable) {
-          d.gold += it.gold || 0;
-          d.orders[it.id] = this.orderNo(it.id) + 1;
-        } else {
-          d.premium[it.id] = true;
-          if (it.id === 'unlock_all') d.unlocked = 99;
-          if (it.id === 'skin_gold') { d.skins.push('gold'); d.skin = 'gold'; }
-        }
-        Save.save();
-        return { ok: true, msg: `تم التفعيل: ${it.name}${it.gold ? ` (+${fmtInt(it.gold)} ذهب)` : ''}`, item: it };
+      const top = this.orderNo(it.id) + 3;
+      for (let n = 1; n <= top; n++) {
+        if (verifyCode(c, Save.uuid, it.id, n, CONFIG.shopSecret)) return grant(it, n, false);
+      }
+    }
+    // الهدايا: نطاق مستقل بأرقام 1000-9999
+    for (const it of PREMIUM) {
+      const key = `${it.id}@gift`;
+      for (let n = 1000; n <= 9999; n++) {
+        if (verifyCode(c, Save.uuid, key, n, CONFIG.shopSecret)) return grant(it, n, true);
       }
     }
     return { ok: false, msg: 'الكود غير صحيح لهذا الجهاز. تأكد من إرسال المعرّف الصحيح.' };

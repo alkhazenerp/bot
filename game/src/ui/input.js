@@ -28,7 +28,7 @@ export class Input {
     this._bind();
   }
 
-  edge(name) { this._edges[name] = true; }
+  edge(name) { if (this.enabled) this._edges[name] = true; }
 
   _bind() {
     const c = this.canvas;
@@ -37,14 +37,18 @@ export class Input {
       if (!this.enabled) return;
       if (e.button === 2) { this.edge('zoom'); return; }
       if (e.button !== 0) return;
-      if (this.settings.pointerLock && !this.locked && c.requestPointerLock) {
+      if (this.settings.pointerLock && !this.locked && c.requestPointerLock && !matchMedia('(pointer: coarse)').matches) {
+        // نقرة الالتقاط لا تطلق
         try { const r = c.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (err) { /* */ }
+        this._lockClick = true;
+        return;
       }
       if (this.locked) { this.fireDown = true; this.edge('fire'); }
       else { this._mouseDrag = true; this._pressT = performance.now(); this._moved = 0; }
     });
     window.addEventListener('mouseup', (e) => {
       if (e.button !== 0) return;
+      if (this._lockClick) { this._lockClick = false; this.fireDown = false; return; }
       if (this._mouseDrag) {
         this._mouseDrag = false;
         if (this.enabled && this._moved < 6 && performance.now() - this._pressT < 350) { this.edge('fire'); this._tapFire = 0.12; }
@@ -62,10 +66,18 @@ export class Input {
     c.addEventListener('wheel', (e) => {
       if (!this.enabled) return;
       e.preventDefault();
-      this.edge(e.deltaY < 0 ? 'zoom' : 'zoomOut');
+      const now = performance.now();
+      if (now - (this._wheelT || 0) < 180) return;
+      this._wheelT = now;
+      this.edge(e.deltaY < 0 ? 'zoomIn' : 'zoomOut');
     }, { passive: false });
     c.addEventListener('contextmenu', (e) => e.preventDefault());
-    document.addEventListener('pointerlockchange', () => { this.locked = document.pointerLockElement === c; });
+    document.addEventListener('pointerlockchange', () => {
+      const was = this.locked;
+      this.locked = document.pointerLockElement === c;
+      if (this.locked) this._mouseDrag = false;
+      else if (was && this.enabled && this.onLockLost) this.onLockLost();
+    });
 
     // اللمس: السحب في أي مكان من الشاشة للتصويب
     c.addEventListener('touchstart', (e) => {
@@ -100,13 +112,13 @@ export class Input {
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
       const k = e.code;
       if (!this.keys.has(k)) {
-        if (k === 'Space' || k === 'KeyF') { this.fireDown = true; this.edge('fire'); }
+        if ((k === 'Space' || k === 'KeyF') && this.enabled) { this.fireDown = true; this.edge('fire'); }
         if (k === 'KeyZ' || k === 'KeyQ') this.edge('zoom');
         if (k === 'KeyE') this.edge('zoomOut');
         if (k === 'KeyT') this.edge('thermal');
         if (k === 'KeyC') this.coverToggle = !this.coverToggle;
         if (k === 'Escape' || k === 'KeyP') this.edge('pause');
-        if (k === 'Tab') { this.edge('next'); e.preventDefault(); }
+        if (k === 'Tab' && this.enabled) { this.edge('next'); e.preventDefault(); }
         if (k === 'KeyR') this.edge('replay');
         if (k === 'KeyB') this.edge('top');
         if (k === 'KeyX') this.edge('cancelDrone');
@@ -281,7 +293,7 @@ export class Input {
       aimDX: ax, aimDY: ay,
       fireDown: this.fireDown || this._gpFire || this._tapFire > 0 || this.keys.has('Space'),
       firePressed: !!e.fire,
-      zoomPressed: !!e.zoom, zoomOut: !!e.zoomOut,
+      zoomPressed: !!e.zoom, zoomOut: !!e.zoomOut, zoomIn: !!e.zoomIn,
       thermalPressed: !!e.thermal, pausePressed: !!e.pause,
       coverHeld: this.coverHeld || this.keys.has('ControlLeft'),
       coverToggle: this.coverToggle,
@@ -293,5 +305,8 @@ export class Input {
   }
 
   selectWeapon(id) { this._edges.weapon = id; }
-  resetToggles() { this.coverToggle = false; this.coverHeld = false; this.fireDown = false; this.stick.x = this.stick.y = 0; this._arrow = null; }
+  resetToggles() {
+    this.coverToggle = false; this.coverHeld = false; this.fireDown = false; this.stick.x = this.stick.y = 0; this._arrow = null;
+    this._edges = {}; this.dx = this.dy = this.gdx = this.gdy = 0; this._tapFire = 0;
+  }
 }
