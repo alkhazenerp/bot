@@ -106,7 +106,7 @@ export class Entity {
 
   // اختبار إصابة القطعة p0→p1 مع صناديق الوحدة
   hitTest(p0, p1) {
-    if (!this.root.visible || (!this.alive && (this.cls === 'infantry' || this.cls === 'drone'))) return null;
+    if (this.escaped || !this.root.parent || !this.root.visible || (!this.alive && (this.cls === 'infantry' || this.cls === 'drone'))) return null;
     _m.copy(this.root.matrixWorld).invert();
     const a = p0.clone().applyMatrix4(_m), b = p1.clone().applyMatrix4(_m);
     let best = null;
@@ -117,7 +117,7 @@ export class Entity {
     if (!best) return null;
     const lp = a.clone().lerp(b, best.t);
     let side = 'side';
-    if (best.axis === 1) side = best.sgn < 0 ? 'top' : 'bottom';
+    if (best.axis === 1) side = best.sgn > 0 ? 'top' : 'bottom';
     else if (best.axis === 2) side = best.sgn < 0 ? 'rear' : 'front';
     // تحويل النتيجة لاتجاه الهيكل عند ضرب البرج
     const point = p0.clone().lerp(p1, best.t);
@@ -145,8 +145,8 @@ export class Entity {
     this.alive = false;
     this.hp = 0;
     this.killInfo = info;
-    this.world.onEntityKilled(this, info);
     this.onDeath(info);
+    this.world.onEntityKilled(this, info);
   }
 
   onDeath() {}
@@ -154,7 +154,13 @@ export class Entity {
   setWrecked(on) {
     if (on === this.wrecked) return;
     this.wrecked = on;
-    this.root.traverse((o) => {
+    const roots = [this.root];
+    if (this.turret) {
+      let p = this.turret.parent;
+      while (p && p !== this.root) p = p.parent;
+      if (!p) roots.push(this.turret);
+    }
+    for (const rt of roots) rt.traverse((o) => {
       if (!o.isMesh || o.userData.matKey === 'exhaust' || o.userData.matKey === 'rotor') {
         if (o.userData.matKey === 'rotor') o.visible = !on;
         return;
@@ -170,7 +176,7 @@ export class Entity {
     });
     const ab = this.root.getObjectByName('afterburner');
     if (ab) ab.visible = !on;
-    this.world.vision.refresh(this.root);
+    for (const rt of roots) this.world.vision.refresh(rt);
   }
 
   // تحديد هدف لإطلاق النار: اللاعب أو أقرب وحدة صديقة
@@ -500,7 +506,7 @@ export class GroundVehicle extends Entity {
     const w = this.world;
     const fx = Math.sin(this.heading), fz = Math.cos(this.heading);
     for (const e of w.entities) {
-      if (e === this || !(e instanceof GroundVehicle) || e.cls === 'static') continue;
+      if (e === this || e.escaped || !(e instanceof GroundVehicle) || e.cls === 'static') continue;
       const dx = e.pos.x - this.pos.x, dz = e.pos.z - this.pos.z;
       const fwd = dx * fx + dz * fz;
       if (fwd < 0.5 || fwd > 22) continue;
@@ -634,6 +640,7 @@ export class Helicopter extends Entity {
   }
 
   update(dt) {
+    if (this.escaped) return;
     const w = this.world;
     const t = w.time;
     const p = this.pos;
@@ -740,6 +747,7 @@ export class Jet extends Entity {
   }
 
   update(dt) {
+    if (this.escaped) return;
     const w = this.world;
     const p = this.pos;
     this.engine?.update(p, this.vel);

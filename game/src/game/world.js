@@ -173,7 +173,7 @@ export class World {
 
   warn(kind, from) { this.events.emit('warning', { kind, from: from ? from.clone() : null }); }
   hudMsg(kind) { this.events.emit('hudmsg', kind); }
-  radio(kind, data) { this.events.emit('radio', { kind, data }); }
+  radio(kind, data) { if (this.mission) this.mission.radio(kind); else this.events.emit('radio', { kind, data }); }
 
   rocketSalvo(heli) {
     const n = heli.type === 'mi24' ? 10 : 6;
@@ -378,7 +378,7 @@ export class World {
       const kind = e.cls === 'heli' ? 'heli' : e.cls === 'jet' ? 'jet' : e.cls === 'drone' ? 'moped' : null;
       if (kind) e.engine = this.audio.loop(kind, e.pos);
     }
-    for (const p of this.projectiles) if (p.motor) p.motor = this.audio.loop('motor', p.pos);
+    for (const p of this.projectiles) if (p.motor && p.alive) p.motor = this.audio.loop('motor', p.pos);
     const d = this.player.activeDrone;
     if (d) d.buzz = this.audio.loop('fpv', null);
   }
@@ -418,6 +418,7 @@ export class World {
     this.audio.ambience(null);
     this.scene.traverse((o) => {
       if (o.geometry) o.geometry.dispose();
+      if (o.isMesh && o.userData.matKey === 'track' && o.material) { o.material.map?.dispose(); o.material.dispose(); }
     });
     this.terrain?.dispose();
     this.env?.dispose();

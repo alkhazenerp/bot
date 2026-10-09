@@ -40,6 +40,7 @@ export class Player {
     };
     this.maxAmmo = { ...this.ammo };
     this.reload = 0;
+    this.reloadIgla = 0;
     this.rocketCd = 0;
     this.maxHp = 100 * (1 + (this.upg.armor || 0) * 0.2);
     this.hp = this.maxHp;
@@ -237,6 +238,7 @@ export class Player {
     // التلقيم والتبريد
     if (!this.activeTow && this.reload > 0) this.reload = Math.max(0, this.reload - dt);
     this.rocketCd = Math.max(0, this.rocketCd - dt);
+    this.reloadIgla = Math.max(0, this.reloadIgla - dt);
     this.heat = Math.max(0, this.heat - dt * 0.28);
     if (this.overheat && this.heat < 0.35) this.overheat = false;
     this.mgCd -= dt;
@@ -307,7 +309,7 @@ export class Player {
         const a = dir.angleTo(c.sub(eye).normalize());
         if (a < ba) { ba = a; best = e; }
       }
-      if (best && this.ammo.igla > 0 && this.reload <= 0) {
+      if (best && this.ammo.igla > 0 && this.reloadIgla <= 0) {
         if (this.lock.target !== best) { this.lock = { target: best, t: 0, locked: false }; }
         this.lock.t += dt;
         this.lock.locked = this.lock.t >= WEAPONS.igla.lockTime;
@@ -318,13 +320,13 @@ export class Player {
       }
       if (input.firePressed) {
         if (this.ammo.igla <= 0) w.hudMsg('noammo');
-        else if (this.reload > 0) w.hudMsg('reloading');
+        else if (this.reloadIgla > 0) w.hudMsg('reloading');
         else if (!this.lock.locked) w.hudMsg('nolock');
         else {
           this.ammo.igla--;
           this.stats.shots++;
           w.addProjectile(new IglaMissile(w, this, this.lock.target));
-          this.reload = WEAPONS.igla.reload;
+          this.reloadIgla = WEAPONS.igla.reload;
           this.exposure = Math.min(1, this.exposure + 0.2);
           this.lock = { target: null, t: 0, locked: false };
           w.audio.lockTone(-1);

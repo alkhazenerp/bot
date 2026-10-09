@@ -1,7 +1,7 @@
 // المقذوفات: تاو موجّه سلكياً، رصاص الرشاش، إيغلا، مسيّرة شاهين، رشقات الراجمة، ومقذوفات العدو
 import * as THREE from 'three';
 import { towMissileModel, rocketModel, bombModel, shellModel, fpvDroneModel } from '../engine/models.js';
-import { clamp, rand, chance, damp } from '../core/util.js';
+import { clamp, rand, chance, damp, distToSegment2 } from '../core/util.js';
 
 const Z = new THREE.Vector3(0, 0, 1);
 const _v = new THREE.Vector3();
@@ -136,9 +136,11 @@ export class TowMissile {
     if (this.top && this.t > 0.6) {
       for (const e of w.entities) {
         if (!e.alive || e.cls === 'infantry' || e.cls === 'heli' || e.cls === 'jet' || e.cls === 'drone') continue;
-        const dx = e.pos.x - this.pos.x, dz = e.pos.z - this.pos.z;
-        if (dx * dx + dz * dz < 4 && this.pos.y > e.pos.y + 1 && this.pos.y < e.pos.y + e.height + 5) {
-          return this._explode(this.pos.clone(), e, { side: 'top', part: 'turret', point: this.pos.clone() }, false, true);
+        const r = distToSegment2(e.pos.x, e.pos.z, this.prev.x, this.prev.z, this.pos.x, this.pos.z);
+        const y = this.prev.y + (this.pos.y - this.prev.y) * r.t;
+        if (r.d < 2.2 && y > e.pos.y + 1 && y < e.pos.y + e.height + 5) {
+          const pt = this.prev.clone().lerp(this.pos, r.t);
+          return this._explode(pt, e, { side: 'top', part: 'turret', point: pt }, false, true);
         }
       }
     }

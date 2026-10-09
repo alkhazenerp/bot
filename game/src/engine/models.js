@@ -52,7 +52,7 @@ export function getMat(key, palette = 'regime') {
     case 'fabric': m = new THREE.MeshStandardMaterial({ color: palette === 'friend' ? 0xd8d2c0 : 0xb5a77e, roughness: 1 }); break;
     case 'missile': m = new THREE.MeshStandardMaterial({ color: 0xd9d6cc, roughness: 0.5, metalness: 0.3 }); break;
     case 'gold': m = new THREE.MeshStandardMaterial({ color: 0xd4a536, roughness: 0.3, metalness: 0.9 }); break;
-    case 'exhaust': m = new THREE.MeshBasicMaterial({ color: new THREE.Color(5, 2.2, 0.8), transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false }); break;
+    case 'exhaust': m = new THREE.MeshBasicMaterial({ color: new THREE.Color(3.2, 1.4, 0.5), transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }); break;
     case 'rotor': m = new THREE.MeshBasicMaterial({ map: rotorDiscTexture(), transparent: true, depthWrite: false, side: THREE.DoubleSide }); break;
     default: m = new THREE.MeshStandardMaterial({ color: 0x888888 });
   }
@@ -458,8 +458,9 @@ function bunkerModel({ palette = 'regime' }) {
     if (r > 1 && r < 4 && (k === 0 || k === 17)) continue; // فتحة الرمي
     P.add(bag, 'sandbag', Math.sin(a) * 2.2, 0.2 + r * 0.32, Math.cos(a) * 2.2, 0, a + Math.PI / 2 + (rnd() - 0.5) * 0.2, 0, 1, 0.8, 1.2);
   }
-  P.box(5.2, 0.35, 5.2, 'concrete', 0, 1.85, 0);
-  P.box(5.4, 0.25, 5.4, 'sandbag', 0, 2.1, 0);
+  P.box(4.8, 0.3, 4.8, 'concrete', 0, 1.62, 0);
+  P.box(4.4, 0.3, 4.4, 'sandbag', 0, 1.9, 0);
+  for (const [x, z] of [[-1.9, -1.9], [1.9, -1.9], [-1.9, 1.9], [1.9, 1.9]]) P.box(0.25, 1.5, 0.25, 'wood', x, 0.75, z);
   root.add(P.build('hull'));
   const turret = pivot('turret', 0, 1.15, 1.6);
   const gun = pivot('gun', 0, 0, 0);
@@ -901,7 +902,7 @@ export function fpvDroneModel() {
 }
 
 // ===================== المقذوفات =====================
-export function towMissileModel() {
+function _towMissileModel() {
   const P = new Part('olive');
   P.cylZ(0.076, 0.076, 1.0, 'missile', 0, 0, 0, 12);
   P.cylZ(0.04, 0.07, 0.25, 'missile', 0, 0, 0.62, 12);
@@ -916,7 +917,7 @@ export function towMissileModel() {
   return g;
 }
 
-export function rocketModel(scale = 1, color = 'dark') {
+function _rocketModel(scale = 1, color = 'dark') {
   const P = new Part('olive');
   P.cylZ(0.06 * scale, 0.06 * scale, 1.4 * scale, color, 0, 0, 0, 8);
   P.add(new THREE.ConeGeometry(0.06 * scale, 0.25 * scale, 8).rotateX(Math.PI / 2), color, 0, 0, 0.82 * scale);
@@ -927,14 +928,14 @@ export function rocketModel(scale = 1, color = 'dark') {
   return g;
 }
 
-export function bombModel() {
+function _bombModel() {
   const P = new Part('olive');
   P.add(lathe([[0.01, 1.3], [0.22, 1.0], [0.27, 0.3], [0.25, -0.6], [0.12, -1.0]], 12), 'dark', 0, 0, 0);
   for (let k = 0; k < 4; k++) { const a = (k / 4) * Math.PI * 2; P.box(0.01, 0.3, 0.3, 'dark', Math.sin(a) * 0.2, Math.cos(a) * 0.2, -1.05, 0, 0, -a); }
   return P.build('bomb');
 }
 
-export function shellModel() {
+function _shellModel() {
   const m = new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 4), getMat('hot'));
   m.scale.set(1, 1, 3);
   m.userData.heat = 1;
@@ -999,3 +1000,14 @@ export function createModel(type) {
 export function preloadModels(types) {
   for (const t of types) if (!protoCache.has(t) && BUILDERS[t]) protoCache.set(t, BUILDERS[t]());
 }
+
+// مقذوفات كثيرة الإطلاق: نموذج أولي مخزّن ونسخ تشارك الهندسة والمواد (بلا تسرب ذاكرة)
+const _projCache = new Map();
+function cachedProj(key, make) {
+  if (!_projCache.has(key)) _projCache.set(key, make());
+  return _projCache.get(key).clone(true);
+}
+export function towMissileModel() { return cachedProj('tow', () => _towMissileModel()); }
+export function rocketModel(scale = 1, color = 'dark') { return cachedProj(`r${scale}|${color}`, () => _rocketModel(scale, color)); }
+export function bombModel() { return cachedProj('bomb', () => _bombModel()); }
+export function shellModel() { return cachedProj('shell', () => _shellModel()); }
