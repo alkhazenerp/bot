@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>ردع العدوان</title>
+<meta name="description" content="لعبة رماية صواريخ تاو ثلاثية الأبعاد على محاور معركة ردع العدوان من حلب إلى دمشق.">
+<meta name="theme-color" content="#0c0f0c">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Changa:wght@400;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Lalezar&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="app">
+  <canvas id="gl"></canvas>
+  <div id="shade"></div>
+
+  <!-- شاشة الإقلاع -->
+  <section id="scr-boot" class="screen show">
+    <div class="boot">
+      <div class="flagline"><i></i><i></i><i></i></div>
+      <h1 class="display">ردع العدوان</h1>
+      <p class="boot-sub">جارٍ تجهيز المحرك…</p>
+      <div class="progress"><div id="boot-fill"></div></div>
+      <p class="boot-err" id="boot-err" hidden></p>
+    </div>
+  </section>
+
+  <!-- القائمة الرئيسية -->
+  <section id="scr-menu" class="screen">
+    <div class="menu-grid">
+      <header class="title-block">
+        <div class="eyebrow">27 تشرين الثاني — 8 كانون الأول 2024</div>
+        <h1 class="display">ردع العدوان</h1>
+        <p class="sub">رامي التاو · من ريف حلب الغربي حتى دمشق</p>
+      </header>
+      <nav class="menu-actions">
+        <button class="btn primary big" id="btn-play"><span>ابدأ المعركة</span><small>10 محاور · 30 مهمة</small></button>
+        <button class="btn" id="btn-store">المتجر والترسانة</button>
+        <button class="btn gift" id="btn-gift">الباقة الهدية <b class="dot" id="gift-dot" hidden></b></button>
+        <button class="btn" id="btn-settings">الإعدادات</button>
+        <button class="btn ghost" id="btn-about">حول اللعبة</button>
+      </nav>
+      <aside class="profile">
+        <div class="stat"><span class="k">الذهب</span><span class="v gold" id="m-gold">0</span></div>
+        <div class="stat"><span class="k">النجوم</span><span class="v" id="m-stars">0</span></div>
+        <div class="stat"><span class="k">الإصابات</span><span class="v" id="m-kills">0</span></div>
+        <div class="stat"><span class="k">أبعد رمية</span><span class="v" id="m-long">0 م</span></div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- خريطة المحاور -->
+  <section id="scr-map" class="screen">
+    <div class="topbar">
+      <button class="btn ghost back" data-back="menu">رجوع</button>
+      <h2>محاور المعركة</h2>
+      <div class="gold-chip"><span id="map-gold">0</span> ذهب</div>
+    </div>
+    <div class="map-layout">
+      <div class="map-wrap"><svg id="route-map" viewBox="0 0 400 700" role="img" aria-label="خريطة محاور ردع العدوان"></svg></div>
+      <div class="map-panel" id="map-panel"></div>
+    </div>
+  </section>
+
+  <!-- الإيجاز -->
+  <section id="scr-brief" class="screen">
+    <div class="topbar">
+      <button class="btn ghost back" data-back="map">رجوع</button>
+      <h2 id="brief-title">الإيجاز</h2>
+      <div></div>
+    </div>
+    <div class="brief" id="brief-body"></div>
+  </section>
+
+  <!-- التحميل -->
+  <section id="scr-loading" class="screen">
+    <div class="loading-card">
+      <div class="eyebrow" id="load-region">—</div>
+      <h2 id="load-title">—</h2>
+      <div class="progress"><div id="load-fill"></div></div>
+      <p id="load-step">…</p>
+      <p class="tip" id="load-tip"></p>
+    </div>
+  </section>
+
+  <!-- واجهة القتال -->
+  <div id="hud" hidden>
+    <canvas id="hud-canvas"></canvas>
+    <div class="hud-top">
+      <div class="obj-panel">
+        <div class="obj-head"><span id="timer" class="timer">0:00</span><span class="score">النقاط <b id="score">0</b></span></div>
+        <ul id="obj-list"></ul>
+      </div>
+      <div class="hud-right">
+        <button class="hbtn small" id="btn-pause" aria-label="إيقاف مؤقت">❚❚</button>
+        <div class="bars">
+          <div class="bar hp" id="hp-bar"><span>الموقع</span><i id="hp-fill"></i></div>
+          <div class="bar exp" id="exp-bar"><span>الانكشاف</span><i id="exp-fill"></i></div>
+        </div>
+      </div>
+    </div>
+    <div id="killfeed"></div>
+    <div id="radio"><span class="radio-tag">لاسلكي</span><span id="radio-text"></span></div>
+    <div id="warning" class="warning"></div>
+    <div id="center-msg"><div id="center-msg-main"></div><div id="center-msg-sub"></div></div>
+    <div id="toast"></div>
+    <div class="hud-bottom">
+      <div class="left-ctrls">
+        <div id="stick" class="stick"><div id="stick-knob"></div></div>
+        <div id="dpad" class="dpad">
+          <button data-a="up" aria-label="أعلى">▲</button>
+          <button data-a="left" aria-label="يسار">◀</button>
+          <button data-a="right" aria-label="يمين">▶</button>
+          <button data-a="down" aria-label="أسفل">▼</button>
+        </div>
+        <button class="hbtn" id="btn-cover">احتماء</button>
+      </div>
+      <div class="center-ctrls">
+        <div class="wstatus-row"><span id="wstatus">جاهز</span><div class="reload"><i id="reload-fill"></i></div></div>
+        <div id="weapon-bar"></div>
+      </div>
+      <div class="right-ctrls">
+        <button class="hbtn small" id="btn-top" hidden>2B</button>
+        <button class="hbtn" id="btn-thermal">حراري</button>
+        <button class="hbtn" id="btn-zoom">تكبير <b id="zoom-label">×1</b></button>
+        <button class="fire" id="btn-fire" aria-label="إطلاق">إطلاق</button>
+      </div>
+    </div>
+    <button class="hbtn replay-quick" id="btn-replay-quick" hidden>إعادة اللقطة</button>
+  </div>
+
+  <!-- إعادة اللقطة -->
+  <div id="replay-ui" hidden>
+    <div class="lb top"></div><div class="lb bottom"></div>
+    <div class="replay-label"><b>إعادة اللقطة</b><span id="replay-info"></span></div>
+    <div class="replay-actions">
+      <button class="btn" id="btn-rec">تسجيل فيديو</button>
+      <button class="btn primary" id="btn-skip">متابعة</button>
+    </div>
+    <div class="rec-dot" id="rec-dot" hidden>● تسجيل</div>
+  </div>
+
+  <!-- الإيقاف المؤقت -->
+  <section id="scr-pause" class="screen overlay">
+    <div class="card narrow">
+      <h2>إيقاف مؤقت</h2>
+      <button class="btn primary" id="p-resume">متابعة</button>
+      <button class="btn" id="p-replay">إعادة آخر لقطة</button>
+      <button class="btn" id="p-settings">الإعدادات</button>
+      <button class="btn" id="p-restart">إعادة المهمة</button>
+      <button class="btn ghost" id="p-quit">الانسحاب للخريطة</button>
+    </div>
+  </section>
+
+  <!-- النتيجة -->
+  <section id="scr-end" class="screen overlay">
+    <div class="card end" id="end-card"></div>
+  </section>
+
+  <!-- المتجر -->
+  <section id="scr-store" class="screen">
+    <div class="topbar">
+      <button class="btn ghost back" data-back="menu">رجوع</button>
+      <h2>المتجر والترسانة</h2>
+      <div class="gold-chip"><span id="store-gold">0</span> ذهب</div>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-tab="weapons">الأسلحة</button>
+      <button class="tab" data-tab="upgrades">الترقيات</button>
+      <button class="tab" data-tab="skins">التمويه</button>
+      <button class="tab" data-tab="premium">مميز (واتساب)</button>
+    </div>
+    <div class="store-body" id="store-body"></div>
+  </section>
+
+  <!-- الباقة الهدية -->
+  <section id="scr-gift" class="screen">
+    <div class="topbar">
+      <button class="btn ghost back" data-back="menu">رجوع</button>
+      <h2>الباقة الهدية</h2>
+      <div class="gold-chip"><span id="gift-gold">0</span> ذهب</div>
+    </div>
+    <div class="gift-body" id="gift-body"></div>
+  </section>
+
+  <!-- الإعدادات -->
+  <section id="scr-settings" class="screen">
+    <div class="topbar">
+      <button class="btn ghost back" id="settings-back">رجوع</button>
+      <h2>الإعدادات</h2>
+      <div></div>
+    </div>
+    <div class="settings" id="settings-body"></div>
+  </section>
+
+  <!-- حول -->
+  <section id="scr-about" class="screen">
+    <div class="topbar">
+      <button class="btn ghost back" data-back="menu">رجوع</button>
+      <h2>حول اللعبة</h2>
+      <div></div>
+    </div>
+    <div class="about">
+      <p>«ردع العدوان» لعبة رماية ثلاثية الأبعاد مستوحاة من أحداث المعركة بين 27 تشرين الثاني و8 كانون الأول 2024، من الفوج 46 في ريف حلب الغربي حتى دمشق. الأحداث والمواقع في اللعبة تقريبية لأغراض اللعب.</p>
+      <h3>التحكم</h3>
+      <ul class="keys">
+        <li><b>الهاتف:</b> اسحب على الشاشة للتصويب، أو فعّل «الأزرار» أو «دوران الجهاز» من الإعدادات. زر إطلاق كبير يميناً.</li>
+        <li><b>الحاسوب:</b> الفأرة للتصويب، النقر للإطلاق، العجلة أو الزر الأيمن للتكبير، T حراري، C احتماء، 1–5 الأسلحة، R إعادة اللقطة، Esc إيقاف.</li>
+        <li><b>يد التحكم:</b> العصا للتصويب، RT إطلاق، LT تكبير، Y حراري، B احتماء.</li>
+      </ul>
+      <h3>نصائح التاو</h3>
+      <ul>
+        <li>التاو موجّه سلكياً: أبقِ الشعيرات على الهدف حتى لحظة الإصابة.</li>
+        <li>الإصابة من الجانب أو الخلف أشد فتكاً. دبابات T-90 تشوّش بمنظومة شتورا على من يرميها من الأمام.</li>
+        <li>كل إطلاق يرفع انكشاف موقعك. احتمِ عند تحذير الصواريخ الموجهة أو الغارات.</li>
+      </ul>
+      <p class="muted" id="about-ver"></p>
+    </div>
+  </section>
+
+  <div id="modal" hidden><div class="modal-card" id="modal-card"></div></div>
+  <div id="ui-toast"></div>
+  <div id="rotate-hint"><div><b>أدِر الجهاز أفقياً</b><span>اللعبة مصممة للوضع الأفقي</span><button class="btn" id="rotate-ok">متابعة على أي حال</button></div></div>
+</div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

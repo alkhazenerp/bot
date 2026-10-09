@@ -134,6 +134,8 @@ export class Terrain {
           }
           road.deck = deck; road.bridgeA = a; road.bridgeB = b;
           road.bridgePts = road.pts.slice(Math.max(0, a - 2), b + 3);
+          const xs = road.bridgePts.map((p) => p[0]), zs = road.bridgePts.map((p) => p[1]);
+          road.bridgeBox = [Math.min(...xs) - road.w, Math.max(...xs) + road.w, Math.min(...zs) - road.w, Math.max(...zs) + road.w];
         }
       }
       road.prof = prof;
@@ -199,9 +201,11 @@ export class Terrain {
   groundAt(x, z) {
     // أعلى من الأرض والماء والجسور
     let h = this.heightAt(x, z);
-    if (this.river && this.riverDist(x, z) < 2) h = Math.max(h, this.river.level);
+    if (this.river && h < this.river.level) h = this.river.level;
     for (const r of this.roads) {
       if (r.deck == null) continue;
+      const bb = r.bridgeBox;
+      if (x < bb[0] || x > bb[1] || z < bb[2] || z > bb[3]) continue;
       const { d } = distToPolyline2(x, z, r.bridgePts);
       if (d < r.w / 2 + 1) h = Math.max(h, r.deck + 0.6);
     }
