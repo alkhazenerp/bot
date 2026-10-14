@@ -14,4 +14,14 @@
     <string name="widget_strip_desc">شريط أفقي نحيف بجميع الأوقات</string>
     <string name="widget_clock_label">عباد الرحمن • الساعة</string>
     <string name="widget_clock_desc">ساعة كبيرة مع التاريخين والصلاة القادمة</string>
+    <string name="widget_mihrab_label">عباد الرحمن • المحراب</string>
+    <string name="widget_mihrab_desc">قوس أندلسي مزخرف بالصلاة القادمة والعدّاد</string>
+    <string name="widget_arcade_label">عباد الرحمن • رواق الحمراء</string>
+    <string name="widget_arcade_desc">أقواس قصر الحمراء تحمل مواقيت اليوم</string>
+    <string name="widget_star_label">عباد الرحمن • النجمة الثُّمانية</string>
+    <string name="widget_star_desc">نجمة أندلسية بحلقة تقدّم حتى الصلاة القادمة</string>
+    <string name="widget_zellige_label">عباد الرحمن • الزليج</string>
+    <string name="widget_zellige_desc">بلاطات زليج أندلسية بأوقات اليوم</string>
+    <string name="widget_cartouche_label">عباد الرحمن • اللوحة</string>
+    <string name="widget_cartouche_desc">لوحة أفقية بشعار المئذنة والهلال والتاريخ الهجري</string>
 </resources>

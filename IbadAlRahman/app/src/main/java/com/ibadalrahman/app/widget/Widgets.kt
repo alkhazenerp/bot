@@ -4,6 +4,7 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -11,6 +12,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.os.Bundle
 import android.os.SystemClock
+import android.util.SizeF
 import android.view.View
 import android.widget.RemoteViews
 import androidx.core.graphics.ColorUtils
@@ -25,14 +27,33 @@ import com.ibadalrahman.app.data.WidgetPrefs
 import com.ibadalrahman.app.data.WidgetTheme
 import com.ibadalrahman.app.util.Format
 import kotlin.math.cos
+import kotlin.math.roundToInt
 import kotlin.math.sin
+import kotlin.math.sqrt
 
-enum class WidgetKind(val layout: Int, val title: String, val description: String) {
-    NEXT(R.layout.widget_next, "الصلاة القادمة", "اسم الصلاة القادمة ووقتها مع عدّاد تنازلي"),
-    TODAY(R.layout.widget_today, "مواقيت اليوم", "جميع أوقات اليوم مع إبراز الصلاة القادمة"),
-    RING(R.layout.widget_ring, "الحلقة", "حلقة تقدّم دائرية بين الصلاتين"),
-    STRIP(R.layout.widget_strip, "الشريط", "شريط أفقي نحيف بجميع الأوقات"),
-    CLOCK(R.layout.widget_clock, "الساعة", "ساعة كبيرة مع التاريخين والصلاة القادمة"),
+/**
+ * Widget styles. [widthDp] x [heightDp] is the size used for previews and when the launcher
+ * reports none; [panel] means the layout has the w_bg/w_border rounded panel.
+ */
+enum class WidgetKind(
+    val layout: Int,
+    val title: String,
+    val description: String,
+    val widthDp: Float,
+    val heightDp: Float,
+    val panel: Boolean = true,
+    val andalusian: Boolean = false,
+) {
+    NEXT(R.layout.widget_next, "الصلاة القادمة", "اسم الصلاة القادمة ووقتها مع عدّاد تنازلي", 150f, 150f),
+    TODAY(R.layout.widget_today, "مواقيت اليوم", "جميع أوقات اليوم مع إبراز الصلاة القادمة", 330f, 140f),
+    RING(R.layout.widget_ring, "الحلقة", "حلقة تقدّم دائرية بين الصلاتين", 150f, 150f),
+    STRIP(R.layout.widget_strip, "الشريط", "شريط أفقي نحيف بجميع الأوقات", 330f, 60f),
+    CLOCK(R.layout.widget_clock, "الساعة", "ساعة كبيرة مع التاريخين والصلاة القادمة", 330f, 140f),
+    MIHRAB(R.layout.widget_mihrab, "المحراب", "قوس أندلسي مزخرف بالصلاة القادمة والعدّاد", 160f, 190f, panel = false, andalusian = true),
+    ARCADE(R.layout.widget_arcade, "رواق الحمراء", "أقواس قصر الحمراء تحمل مواقيت اليوم", 330f, 180f, andalusian = true),
+    STAR(R.layout.widget_star, "النجمة الثُّمانية", "نجمة أندلسية بحلقة تقدّم حتى الصلاة القادمة", 170f, 170f, panel = false, andalusian = true),
+    ZELLIGE(R.layout.widget_zellige, "الزليج", "بلاطات زليج أندلسية بأوقات اليوم", 260f, 180f, andalusian = true),
+    CARTOUCHE(R.layout.widget_cartouche, "اللوحة", "لوحة أفقية بشعار المئذنة والهلال والتاريخ الهجري", 330f, 84f, panel = false, andalusian = true),
     ;
 
     val providerClass: Class<out AppWidgetProvider>
@@ -42,6 +63,11 @@ enum class WidgetKind(val layout: Int, val title: String, val description: Strin
             RING -> RingWidget::class.java
             STRIP -> StripWidget::class.java
             CLOCK -> ClockWidget::class.java
+            MIHRAB -> MihrabWidget::class.java
+            ARCADE -> ArcadeWidget::class.java
+            STAR -> StarWidget::class.java
+            ZELLIGE -> ZelligeWidget::class.java
+            CARTOUCHE -> CartoucheWidget::class.java
         }
 
     companion object {
@@ -70,6 +96,11 @@ class TodayWidget : BaseWidgetProvider(WidgetKind.TODAY)
 class RingWidget : BaseWidgetProvider(WidgetKind.RING)
 class StripWidget : BaseWidgetProvider(WidgetKind.STRIP)
 class ClockWidget : BaseWidgetProvider(WidgetKind.CLOCK)
+class MihrabWidget : BaseWidgetProvider(WidgetKind.MIHRAB)
+class ArcadeWidget : BaseWidgetProvider(WidgetKind.ARCADE)
+class StarWidget : BaseWidgetProvider(WidgetKind.STAR)
+class ZelligeWidget : BaseWidgetProvider(WidgetKind.ZELLIGE)
+class CartoucheWidget : BaseWidgetProvider(WidgetKind.CARTOUCHE)
 
 object WidgetUpdater {
 
@@ -103,12 +134,43 @@ object WidgetRenderer {
     private val NAME_IDS = intArrayOf(R.id.w_name_0, R.id.w_name_1, R.id.w_name_2, R.id.w_name_3, R.id.w_name_4, R.id.w_name_5)
     private val TIME_IDS = intArrayOf(R.id.w_time_0, R.id.w_time_1, R.id.w_time_2, R.id.w_time_3, R.id.w_time_4, R.id.w_time_5)
 
+    // Paddings and header heights of the panel layouts (widget_arcade.xml, widget_zellige.xml):
+    // the ornament bitmap is drawn for the frame below the header.
+    private const val PANEL_PADDING_DP = 10f
+    private const val ARCADE_HEADER_DP = 36f
+    private const val ZELLIGE_HEADER_DP = 22f
+
     fun render(context: Context, kind: WidgetKind, appWidgetId: Int, snapshot: PrayerSnapshot): RemoteViews {
         val prefs = WidgetPrefs(context)
-        return render(context, kind, prefs.theme(appWidgetId), prefs.opacity(appWidgetId), snapshot)
+        val size = if (kind.andalusian) sizeOf(context, appWidgetId, kind) else null
+        return render(context, kind, prefs.theme(appWidgetId), prefs.opacity(appWidgetId), snapshot, size)
     }
 
-    fun render(context: Context, kind: WidgetKind, theme: WidgetTheme, opacity: Int, snapshot: PrayerSnapshot): RemoteViews {
+    /**
+     * Current size of a placed widget in dp, as reported by the launcher: the narrow width and
+     * tall height in portrait, the wide width and short height in landscape.
+     */
+    fun sizeOf(context: Context, appWidgetId: Int, kind: WidgetKind): SizeF {
+        val options = runCatching { AppWidgetManager.getInstance(context).getAppWidgetOptions(appWidgetId) }.getOrNull()
+        val portrait = context.resources.configuration.orientation != Configuration.ORIENTATION_LANDSCAPE
+        val w = options?.getInt(if (portrait) AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH else AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH) ?: 0
+        val h = options?.getInt(if (portrait) AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT else AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT) ?: 0
+        return SizeF(if (w > 0) w.toFloat() else kind.widthDp, if (h > 0) h.toFloat() else kind.heightDp)
+    }
+
+    /**
+     * Builds the widget. [size] (dp) is needed by the Andalusian styles to draw their ornament;
+     * [preview] leaves out the click action for the in-app previews.
+     */
+    fun render(
+        context: Context,
+        kind: WidgetKind,
+        theme: WidgetTheme,
+        opacity: Int,
+        snapshot: PrayerSnapshot,
+        size: SizeF? = null,
+        preview: Boolean = false,
+    ): RemoteViews {
         val s = Settings.get(context)
         val fmt = Format(s)
         val views = RemoteViews(context.packageName, kind.layout)
@@ -116,17 +178,19 @@ object WidgetRenderer {
         val nextName = Format.prayerName(next.prayer, snapshot.nextIsFriday)
         val remaining = snapshot.status.remainingMillis(snapshot.now)
 
-        // Background colour and transparency.
-        views.setInt(R.id.w_bg, "setColorFilter", theme.background)
-        views.setInt(R.id.w_bg, "setImageAlpha", (opacity.coerceIn(0, 100) * 255) / 100)
-        // Thin gold rim, as on the brand tiles (a neutral rim for the glass theme).
-        views.setViewVisibility(R.id.w_border, View.VISIBLE)
-        views.setInt(
-            R.id.w_border,
-            "setColorFilter",
-            if (theme == WidgetTheme.GLASS) ColorUtils.setAlphaComponent(theme.text, 90) else ColorUtils.setAlphaComponent(theme.accent, 150),
-        )
-        views.setOnClickPendingIntent(R.id.widget_root, Notifications.openAppIntent(context, 10 + kind.ordinal))
+        if (kind.panel) {
+            // Background colour and transparency.
+            views.setInt(R.id.w_bg, "setColorFilter", theme.background)
+            views.setInt(R.id.w_bg, "setImageAlpha", (opacity.coerceIn(0, 100) * 255) / 100)
+            // Thin gold rim, as on the brand tiles (a neutral rim for the glass theme).
+            views.setViewVisibility(R.id.w_border, View.VISIBLE)
+            views.setInt(
+                R.id.w_border,
+                "setColorFilter",
+                if (theme == WidgetTheme.GLASS) ColorUtils.setAlphaComponent(theme.text, 90) else ColorUtils.setAlphaComponent(theme.accent, 150),
+            )
+        }
+        if (!preview) views.setOnClickPendingIntent(R.id.widget_root, Notifications.openAppIntent(context, 10 + kind.ordinal))
 
         fun chrono(id: Int) {
             views.setChronometer(id, SystemClock.elapsedRealtime() + remaining, null, true)
@@ -183,8 +247,115 @@ object WidgetRenderer {
                 views.setTextColor(R.id.w_location, theme.secondary)
                 chrono(R.id.w_chrono)
             }
+
+            WidgetKind.MIHRAB -> {
+                val (w, h, d) = canvasSize(context, size ?: SizeF(kind.widthDp, kind.heightDp))
+                views.setImageViewBitmap(R.id.w_art, AndalusArt.mihrab(w, h, d, theme, opacity / 100f))
+                views.setTextViewText(R.id.w_name, nextName)
+                views.setTextViewText(R.id.w_time, fmt.time(next.time, snapshot.zone))
+                views.setTextViewText(R.id.w_date, fmt.hijri(snapshot.hijri))
+                views.setTextColor(R.id.w_label, theme.secondary)
+                views.setTextColor(R.id.w_name, theme.text)
+                views.setTextColor(R.id.w_time, theme.accent)
+                views.setTextColor(R.id.w_date, theme.secondary)
+                chrono(R.id.w_chrono)
+            }
+
+            WidgetKind.STAR -> {
+                val box = size ?: SizeF(kind.widthDp, kind.heightDp)
+                val side = minOf(box.width, box.height)
+                val (px, _, d) = canvasSize(context, SizeF(side, side))
+                views.setImageViewBitmap(R.id.w_art, AndalusArt.star(px, d, theme, opacity / 100f, snapshot.status.progress(snapshot.now)))
+                views.setTextViewText(R.id.w_name, nextName)
+                views.setTextViewText(R.id.w_time, fmt.time(next.time, snapshot.zone))
+                views.setTextColor(R.id.w_name, theme.text)
+                views.setTextColor(R.id.w_time, theme.accent)
+                chrono(R.id.w_chrono)
+            }
+
+            WidgetKind.ARCADE -> {
+                val box = size ?: SizeF(kind.widthDp, kind.heightDp)
+                val frame = SizeF(
+                    (box.width - 2 * PANEL_PADDING_DP).coerceAtLeast(60f),
+                    (box.height - 2 * PANEL_PADDING_DP - ARCADE_HEADER_DP).coerceAtLeast(30f),
+                )
+                val (w, h, d) = canvasSize(context, frame)
+                views.setImageViewBitmap(R.id.w_art, AndalusArt.arcade(w, h, d, theme, Prayer.entries.size, highlightIndex(snapshot)))
+                bindHeader(views, snapshot, fmt, theme, nextName, withDate = true)
+                chrono(R.id.w_chrono)
+                bindArtCells(views, snapshot, fmt, theme)
+            }
+
+            WidgetKind.ZELLIGE -> {
+                val box = size ?: SizeF(kind.widthDp, kind.heightDp)
+                val frame = SizeF(
+                    (box.width - 2 * PANEL_PADDING_DP).coerceAtLeast(60f),
+                    (box.height - 2 * PANEL_PADDING_DP - ZELLIGE_HEADER_DP).coerceAtLeast(30f),
+                )
+                val (w, h, d) = canvasSize(context, frame)
+                views.setImageViewBitmap(R.id.w_art, AndalusArt.zellige(w, h, d, theme, 3, 2, highlightIndex(snapshot)))
+                bindHeader(views, snapshot, fmt, theme, nextName, withDate = false)
+                chrono(R.id.w_chrono)
+                bindArtCells(views, snapshot, fmt, theme)
+            }
+
+            WidgetKind.CARTOUCHE -> {
+                val (w, h, d) = canvasSize(context, size ?: SizeF(kind.widthDp, kind.heightDp))
+                views.setImageViewBitmap(R.id.w_art, AndalusArt.cartouche(context, w, h, d, theme, opacity / 100f))
+                views.setTextViewText(R.id.w_name, nextName)
+                views.setTextViewText(R.id.w_time, fmt.time(next.time, snapshot.zone))
+                views.setTextViewText(R.id.w_weekday, Format.weekday(snapshot.date.dayOfWeek))
+                views.setTextViewText(R.id.w_date, "${fmt.number(snapshot.hijri.day)} ${snapshot.hijri.monthName}")
+                views.setTextColor(R.id.w_name, theme.text)
+                views.setTextColor(R.id.w_time, theme.accent)
+                views.setTextColor(R.id.w_label, theme.secondary)
+                views.setTextColor(R.id.w_weekday, theme.secondary)
+                views.setTextColor(R.id.w_date, theme.secondary)
+                chrono(R.id.w_chrono)
+            }
         }
         return views
+    }
+
+    /** Bitmap size in px for [dp], and px per dp: sharp, but within the widget memory budget. */
+    private fun canvasSize(context: Context, dp: SizeF): Triple<Int, Int, Float> {
+        var d = context.resources.displayMetrics.density.coerceIn(1f, 2.5f)
+        val pixels = dp.width * d * dp.height * d
+        if (pixels > MAX_ART_PIXELS) d *= sqrt(MAX_ART_PIXELS / pixels)
+        return Triple((dp.width * d).roundToInt().coerceAtLeast(1), (dp.height * d).roundToInt().coerceAtLeast(1), d)
+    }
+
+    /** About 1.3 MB per ornament bitmap. */
+    private const val MAX_ART_PIXELS = 320_000f
+
+    /** Index of the next prayer in today's row, or -1 when it is not today's (after Isha). */
+    private fun highlightIndex(snapshot: PrayerSnapshot): Int {
+        val next = snapshot.status.next
+        // Before midnight the next prayer may be tomorrow's Fajr: highlight Fajr in today's row then.
+        return if (next.dayOffset == 0 || next.prayer == Prayer.FAJR) Prayer.entries.indexOf(next.prayer) else -1
+    }
+
+    private fun bindHeader(views: RemoteViews, snapshot: PrayerSnapshot, fmt: Format, theme: WidgetTheme, nextName: String, withDate: Boolean) {
+        views.setTextViewText(R.id.w_location, snapshot.locationName)
+        views.setTextViewText(R.id.w_next_label, "$nextName بعد")
+        views.setTextColor(R.id.w_location, theme.text)
+        views.setTextColor(R.id.w_next_label, theme.accent)
+        if (withDate) {
+            views.setTextViewText(R.id.w_date, "${Format.weekday(snapshot.date.dayOfWeek)} • ${fmt.hijri(snapshot.hijri)}")
+            views.setTextColor(R.id.w_date, theme.secondary)
+        }
+    }
+
+    /** Names and times for the arcade and zellige cells; the highlight is part of the ornament. */
+    private fun bindArtCells(views: RemoteViews, snapshot: PrayerSnapshot, fmt: Format, theme: WidgetTheme) {
+        val highlight = highlightIndex(snapshot)
+        Prayer.entries.forEachIndexed { i, prayer ->
+            val on = i == highlight
+            views.setTextViewText(NAME_IDS[i], Format.prayerName(prayer, snapshot.isFriday))
+            views.setTextViewText(TIME_IDS[i], fmt.time(snapshot.today[prayer], snapshot.zone, withPeriod = false))
+            views.setTextColor(NAME_IDS[i], if (on) theme.accent else theme.secondary)
+            views.setTextColor(TIME_IDS[i], if (on) theme.accent else theme.text)
+        }
     }
 
     private fun bindCells(views: RemoteViews, snapshot: PrayerSnapshot, fmt: Format, theme: WidgetTheme) {

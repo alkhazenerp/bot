@@ -1,0 +1,133 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face { font-family: Tajawal; src: url(../../../app/src/main/res/font/tajawal_regular.ttf); font-weight: 400; }
+@font-face { font-family: Tajawal; src: url(../../../app/src/main/res/font/tajawal_bold.ttf); font-weight: 700; }
+body { margin: 0; background: #222; }
+canvas { display: block; }
+</style></head>
+<body>
+<canvas id="c"></canvas>
+<script src="widgets.js"></script>
+<script>
+const D = 2.5;                       // px per dp
+const SAMPLE = {
+  names: ['الفجر', 'الشروق', 'الظهر', 'العصر', 'المغرب', 'العشاء'],
+  times: ['4:52', '6:14', '12:03', '3:21', '5:49', '7:08'],
+  next: 3, nextName: 'العصر', nextTime: '3:21 م', chrono: '01:24:37',
+  hijri: '22 ربيع الآخر 1448 هـ', weekday: 'الأربعاء', location: 'دمشق', progress: 0.62,
+};
+function text(ctx, s, x, y, size, color, weight = 400, align = 'center') {
+  ctx.font = `${weight} ${size * D}px Tajawal`; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'middle';
+  ctx.direction = 'rtl'; ctx.fillText(s, x, y);
+}
+function ltr(ctx, s, x, y, size, color, weight = 700, align = 'center') {
+  ctx.save(); ctx.direction = 'ltr'; ctx.font = `${weight} ${size * D}px Tajawal`; ctx.fillStyle = color;
+  ctx.textAlign = align; ctx.textBaseline = 'middle'; ctx.fillText(s, x, y); ctx.restore();
+}
+
+function drawMihrab(ctx, ox, oy, t, op) {
+  const w = 160 * D, h = 190 * D;
+  ctx.save(); ctx.translate(ox, oy); artMihrab(ctx, w, h, D, t, op);
+  const cx = w / 2;
+  text(ctx, 'الصلاة القادمة', cx, 70 * D, 11, t.secondary);
+  text(ctx, SAMPLE.nextName, cx, 92 * D, 26, t.text, 700);
+  text(ctx, SAMPLE.nextTime, cx, 114 * D, 14, t.accent, 700);
+  ltr(ctx, SAMPLE.chrono, cx, 134 * D, 19, t.text);
+  text(ctx, SAMPLE.hijri, cx, 160 * D, 10, t.secondary);
+  ctx.restore();
+}
+function drawStar(ctx, ox, oy, t, op) {
+  const w = 170 * D, h = 170 * D;
+  ctx.save(); ctx.translate(ox, oy); artStar(ctx, w, h, D, t, op, SAMPLE.progress);
+  const cx = w / 2, cy = h / 2;
+  text(ctx, SAMPLE.nextName, cx, cy - 16 * D, 18, t.text, 700);
+  text(ctx, SAMPLE.nextTime, cx, cy + 2 * D, 12, t.accent, 700);
+  ltr(ctx, SAMPLE.chrono, cx, cy + 19 * D, 15, t.text);
+  ctx.restore();
+}
+function drawArcade(ctx, ox, oy, t, op) {
+  const w = 330 * D, h = 180 * D, pad = 10 * D, head = 46 * D;
+  ctx.save(); ctx.translate(ox, oy); panel(ctx, w, h, D, t, op);
+  // Header: location and date at the start (right), countdown at the end (left).
+  text(ctx, SAMPLE.location, w - pad - 4 * D, pad + 12 * D, 15, t.text, 700, 'right');
+  text(ctx, `${SAMPLE.weekday} • ${SAMPLE.hijri}`, w - pad - 4 * D, pad + 30 * D, 10, t.secondary, 400, 'right');
+  text(ctx, `${SAMPLE.nextName} بعد`, pad + 4 * D, pad + 12 * D, 11, t.accent, 700, 'left');
+  ltr(ctx, SAMPLE.chrono, pad + 4 * D, pad + 30 * D, 16, t.text, 700, 'left');
+  const fw = w - 2 * pad, fh = h - head - pad;
+  ctx.save(); ctx.translate(pad, head);
+  // Arches run right to left like the text: index 0 (Fajr) is the rightmost.
+  artArcade(ctx, fw, fh, D, t, 6, SAMPLE.next);
+  const bay = fw / 6;
+  for (let i = 0; i < 6; i++) {
+    const cx = fw - (i + 0.5) * bay, on = i === SAMPLE.next;
+    text(ctx, SAMPLE.names[i], cx, fh - 30 * D, 10, on ? t.accent : t.secondary, 700);
+    ltr(ctx, SAMPLE.times[i], cx, fh - 14 * D, 13, on ? t.accent : t.text);
+  }
+  ctx.restore(); ctx.restore();
+}
+function drawZellige(ctx, ox, oy, t, op) {
+  const w = 260 * D, h = 180 * D, pad = 10 * D, head = 32 * D;
+  ctx.save(); ctx.translate(ox, oy); panel(ctx, w, h, D, t, op);
+  text(ctx, SAMPLE.location, w - pad - 4 * D, pad + 10 * D, 13, t.text, 700, 'right');
+  ltr(ctx, SAMPLE.chrono, pad + 4 * D, pad + 10 * D, 14, t.text, 700, 'left');
+  ctx.save(); ctx.font = `700 ${14 * D}px Tajawal`; const cw = ctx.measureText(SAMPLE.chrono).width; ctx.restore();
+  text(ctx, `${SAMPLE.nextName} بعد`, pad + 8 * D + cw, pad + 10 * D, 11, t.accent, 700, 'left');
+  const fw = w - 2 * pad, fh = h - head - pad;
+  ctx.save(); ctx.translate(pad, head); artZellige(ctx, fw, fh, D, t, 3, 2, SAMPLE.next);
+  const g = 6 * D, tw = (fw - 2 * g) / 3, th = (fh - g) / 2;
+  for (let i = 0; i < 6; i++) {
+    const c = i % 3, row = Math.floor(i / 3), on = i === SAMPLE.next;
+    const cx = fw - (c + 1) * tw - c * g + tw / 2, cy = row * (th + g) + th / 2;
+    text(ctx, SAMPLE.names[i], cx, cy - 9 * D, 11, on ? t.accent : t.secondary, 700);
+    ltr(ctx, SAMPLE.times[i], cx, cy + 9 * D, 15, on ? t.accent : t.text);
+  }
+  ctx.restore(); ctx.restore();
+}
+function drawCartouche(ctx, ox, oy, t, op, logo) {
+  const w = 330 * D, h = 84 * D;
+  ctx.save(); ctx.translate(ox, oy); artCartouche(ctx, w, h, D, t, op, logo);
+  const startX = w - 92 * D;
+  text(ctx, SAMPLE.nextName, startX, 30 * D, 19, t.text, 700, 'right');
+  ctx.save(); ctx.font = `700 ${19 * D}px Tajawal`; const nw = ctx.measureText(SAMPLE.nextName).width; ctx.restore();
+  text(ctx, SAMPLE.nextTime, startX - nw - 8 * D, 31 * D, 13, t.accent, 700, 'right');
+  text(ctx, 'بعد', startX, 56 * D, 12, t.secondary, 400, 'right');
+  ltr(ctx, SAMPLE.chrono, startX - 26 * D, 56 * D, 16, t.text, 700, 'right');
+  text(ctx, SAMPLE.weekday, 34 * D, 31 * D, 11, t.secondary, 700, 'left');
+  text(ctx, '22 ربيع الآخر', 34 * D, 50 * D, 10, t.secondary, 400, 'left');
+  ctx.restore();
+}
+
+async function main() {
+  await document.fonts.load(`700 20px Tajawal`); await document.fonts.load(`400 20px Tajawal`);
+  const logo = new Image(); logo.src = '../../../app/src/main/res/drawable-nodpi/logo_mark.png'; await logo.decode();
+  const params = new URLSearchParams(location.search);
+  const only = params.get('only');
+  const c = document.getElementById('c'), ctx = c.getContext('2d');
+  if (only) {
+    // Single widget on a transparent canvas: used for the widget-picker previews.
+    document.body.style.background = 'transparent';
+    const t = THEMES.ANDALUS, sizes = { mihrab: [160, 190], star: [170, 170], arcade: [330, 180], zellige: [260, 180], cartouche: [330, 84] };
+    const [w, h] = sizes[only]; c.width = w * D; c.height = h * D;
+    ({ mihrab: () => drawMihrab(ctx, 0, 0, t, 0.92), star: () => drawStar(ctx, 0, 0, t, 0.92), arcade: () => drawArcade(ctx, 0, 0, t, 0.92),
+       zellige: () => drawZellige(ctx, 0, 0, t, 0.92), cartouche: () => drawCartouche(ctx, 0, 0, t, 0.92, logo) })[only]();
+    document.title = 'done'; return;
+  }
+  const rows = [['ANDALUS', 0.92], ['CREAM', 0.95], ['ROYAL', 0.9], ['GLASS', 0.35], ['NIGHT', 0.0]];
+  const W = 1400 * D, rowH = 215 * D; c.width = W; c.height = rows.length * rowH + 20 * D;
+  const g = ctx.createLinearGradient(0, 0, W, c.height);
+  g.addColorStop(0, '#3A6073'); g.addColorStop(0.5, '#16222A'); g.addColorStop(1, '#7B4397');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, c.height);
+  rows.forEach(([name, op], r) => {
+    const t = THEMES[name], y = 15 * D + r * rowH;
+    text(ctx, `${name} ${Math.round(op * 100)}%`, W - 10 * D, y + 6 * D, 11, '#fff', 700, 'right');
+    drawCartouche(ctx, W - 345 * D, y + 20 * D, t, op, logo);
+    drawMihrab(ctx, W - 520 * D, y + 10 * D, t, op);
+    drawStar(ctx, W - 705 * D, y + 20 * D, t, op);
+    drawZellige(ctx, W - 980 * D, y + 15 * D, t, op);
+    drawArcade(ctx, W - 1325 * D, y + 15 * D, t, op);
+  });
+  document.title = 'done';
+}
+main();
+</script></body></html>

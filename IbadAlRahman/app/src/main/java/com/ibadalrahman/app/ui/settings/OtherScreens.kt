@@ -4,6 +4,9 @@ import android.Manifest
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.os.Build
+import android.util.SizeF
+import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -14,6 +17,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -38,6 +42,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -63,6 +68,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.ibadalrahman.app.R
 import com.ibadalrahman.app.alarm.EventType
@@ -94,6 +100,7 @@ import com.ibadalrahman.app.ui.theme.Ruqaa
 import com.ibadalrahman.app.util.Format
 import com.ibadalrahman.app.util.Permissions
 import com.ibadalrahman.app.widget.WidgetKind
+import com.ibadalrahman.app.widget.WidgetRenderer
 import com.ibadalrahman.app.widget.WidgetUpdater
 
 // ---------------------------------------------------------------------------------- status bar
@@ -287,13 +294,21 @@ fun WidgetSettingsScreen(onBack: () -> Unit) {
             ) { Text("تطبيق على جميع الودجت الموجودة") }
         }
 
-        WidgetKind.entries.forEach { kind ->
-            SectionCard(kind.title) {
-                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    WidgetPreview(kind, s.widgetThemeDefault, opacity.toInt(), snapshot, fmt)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(kind.description, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-                        Button(onClick = { requestPin(context, kind) }) { Text("إضافة") }
+        WidgetKind.entries.groupBy { it.andalusian }.toSortedMap(compareByDescending { it }).forEach { (andalusian, kinds) ->
+            Text(
+                if (andalusian) "التصاميم الأندلسية" else "التصاميم البسيطة",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 4.dp),
+            )
+            kinds.forEach { kind ->
+                SectionCard(kind.title) {
+                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        WidgetPreview(kind, s.widgetThemeDefault, opacity.toInt(), snapshot, fmt)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(kind.description, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                            Button(onClick = { requestPin(context, kind) }) { Text("إضافة") }
+                        }
                     }
                 }
             }
@@ -316,9 +331,53 @@ private fun requestPin(context: android.content.Context, kind: WidgetKind) {
     }
 }
 
-/** Compose approximation of a widget over a wallpaper, so transparency can be judged. */
+/**
+ * The real widget (its RemoteViews, drawn exactly as on the home screen) over a wallpaper, so
+ * colours and transparency can be judged. Falls back to a Compose approximation if the views
+ * cannot be applied.
+ */
 @Composable
 fun WidgetPreview(kind: WidgetKind, theme: WidgetTheme, opacity: Int, snapshot: PrayerSnapshot, fmt: Format) {
+    val context = LocalContext.current
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val width = minOf(kind.widthDp, maxWidth.value - 20f).coerceAtLeast(80f)
+        val height = kind.heightDp
+        val view = remember(kind, theme, opacity, snapshot, width) {
+            runCatching {
+                WidgetRenderer.render(context, kind, theme, opacity, snapshot, SizeF(width, height), preview = true)
+                    .apply(context, FrameLayout(context))
+            }.getOrNull()
+        }
+        if (view == null) {
+            ApproximatePreview(kind, theme, opacity, snapshot, fmt)
+        } else {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(Brush.linearGradient(listOf(Color(0xFF3A6073), Color(0xFF16222A), Color(0xFF7B4397))))
+                    .padding(vertical = 14.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                key(view) {
+                    AndroidView(
+                        factory = { ctx ->
+                            FrameLayout(ctx).apply {
+                                (view.parent as? ViewGroup)?.removeView(view)
+                                addView(view)
+                            }
+                        },
+                        modifier = Modifier.size(width.dp, height.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Compose approximation of a widget over a wallpaper, so transparency can be judged. */
+@Composable
+private fun ApproximatePreview(kind: WidgetKind, theme: WidgetTheme, opacity: Int, snapshot: PrayerSnapshot, fmt: Format) {
     val text = Color(theme.text)
     val secondary = Color(theme.secondary)
     val accent = Color(theme.accent)
@@ -414,6 +473,8 @@ fun WidgetPreview(kind: WidgetKind, theme: WidgetTheme, opacity: Int, snapshot: 
                         }
                     }
                 }
+
+                else -> Text(kind.title, color = text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
