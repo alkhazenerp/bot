@@ -67,7 +67,9 @@ import com.ibadalrahman.app.data.LocationResult
 import com.ibadalrahman.app.data.Settings
 import com.ibadalrahman.app.ui.Labels
 import com.ibadalrahman.app.ui.Route
+import com.ibadalrahman.app.ui.components.BrandHeader
 import com.ibadalrahman.app.ui.components.ChoiceDialog
+import com.ibadalrahman.app.ui.components.DedicationFooter
 import com.ibadalrahman.app.ui.components.SectionCard
 import com.ibadalrahman.app.ui.components.SettingItem
 import com.ibadalrahman.app.ui.components.SubPage
@@ -88,6 +90,7 @@ fun SettingsHub(modifier: Modifier, navigate: (Route) -> Unit) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        BrandHeader(Modifier.fillMaxWidth(), logoSize = 52.dp, wordmarkSize = 26)
         Text("الإعدادات", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(start = 8.dp))
         SectionCard("المواقيت") {
             SettingItem(
@@ -119,6 +122,7 @@ fun SettingsHub(modifier: Modifier, navigate: (Route) -> Unit) {
             SettingItem("المظهر", "${Labels.theme(s.themeMode)} • ${if (s.arabicDigits) "أرقام عربية" else "أرقام لاتينية"}", Icons.Filled.Edit, onClick = { navigate(Route.APPEARANCE) })
             SettingItem("حول التطبيق", null, Icons.Filled.Info, onClick = { navigate(Route.ABOUT) })
         }
+        DedicationFooter(Modifier.padding(top = 12.dp, bottom = 8.dp))
     }
 }
 

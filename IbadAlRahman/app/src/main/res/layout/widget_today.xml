@@ -50,7 +50,7 @@
         android:maxLines="1"
         android:ellipsize="end"
         android:text="مكة المكرمة"
-        android:textColor="#FFFFFFFF"
+        android:textColor="#FFF5E6C8"
         android:textSize="15sp"
         android:textStyle="bold" />
 
@@ -61,7 +61,7 @@
         android:maxLines="1"
         android:ellipsize="end"
         android:text="الخميس • 27 ربيع الآخر 1448 هـ"
-        android:textColor="#FFB8C4D0"
+        android:textColor="#FFA8DCD4"
         android:textSize="11sp" />
             </LinearLayout>
 
@@ -78,7 +78,7 @@
         android:maxLines="1"
         android:ellipsize="end"
         android:text="العصر بعد"
-        android:textColor="#FFE8C468"
+        android:textColor="#FFE3C35A"
         android:textSize="11sp"
         android:textStyle="bold" />
 
@@ -87,7 +87,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layoutDirection="ltr"
-        android:textColor="#FFFFFFFF"
+        android:textColor="#FFF5E6C8"
         android:textSize="18sp"
         android:textStyle="bold" />
             </LinearLayout>
@@ -116,7 +116,7 @@
         android:maxLines="1"
         android:ellipsize="end"
         android:text="الفجر"
-        android:textColor="#FFB8C4D0"
+        android:textColor="#FFA8DCD4"
         android:textSize="11sp" />
 
             <TextView
@@ -126,7 +126,7 @@
         android:maxLines="1"
         android:ellipsize="end"
         android:text="4:35"
-        android:textColor="#FFFFFFFF"
+        android:textColor="#FFF5E6C8"
         android:textSize="14sp"
         android:textStyle="bold" />
         </LinearLayout>
@@ -148,7 +148,7 @@
         android:maxLines="1"
         android:ellipsize="end"
         android:text="الشروق"
-        android:textColor="#FFB8C4D0"
+        android:textColor="#FFA8DCD4"
         android:textSize="11sp" />
 
             <TextView
@@ -158,7 +158,7 @@
         android:maxLines="1"
         android:ellipsize="end"
         android:text="5:55"
-        android:textColor="#FFFFFFFF"
+        android:textColor="#FFF5E6C8"
         android:textSize="14sp"
         android:textStyle="bold" />
         </LinearLayout>
@@ -180,7 +180,7 @@
         android:maxLines="1"
         android:ellipsize="end"
         android:text="الظهر"
-        android:textColor="#FFB8C4D0"
+        android:textColor="#FFA8DCD4"
         android:textSize="11sp" />
 
             <TextView
@@ -190,7 +190,7 @@
         android:maxLines="1"
         android:ellipsize="end"
         android:text="12:05"
-        android:textColor="#FFFFFFFF"
+        android:textColor="#FFF5E6C8"
         android:textSize="14sp"
         android:textStyle="bold" />
         </LinearLayout>
@@ -212,7 +212,7 @@
         android:maxLines="1"
         android:ellipsize="end"
         android:text="العصر"
-        android:textColor="#FFB8C4D0"
+        android:textColor="#FFA8DCD4"
         android:textSize="11sp" />
 
             <TextView
@@ -222,7 +222,7 @@
         android:maxLines="1"
         android:ellipsize="end"
         android:text="3:20"
-        android:textColor="#FFFFFFFF"
+        android:textColor="#FFF5E6C8"
         android:textSize="14sp"
         android:textStyle="bold" />
         </LinearLayout>
@@ -244,7 +244,7 @@
         android:maxLines="1"
         android:ellipsize="end"
         android:text="المغرب"
-        android:textColor="#FFB8C4D0"
+        android:textColor="#FFA8DCD4"
         android:textSize="11sp" />
 
             <TextView
@@ -254,7 +254,7 @@
         android:maxLines="1"
         android:ellipsize="end"
         android:text="6:10"
-        android:textColor="#FFFFFFFF"
+        android:textColor="#FFF5E6C8"
         android:textSize="14sp"
         android:textStyle="bold" />
         </LinearLayout>
@@ -276,7 +276,7 @@
         android:maxLines="1"
         android:ellipsize="end"
         android:text="العشاء"
-        android:textColor="#FFB8C4D0"
+        android:textColor="#FFA8DCD4"
         android:textSize="11sp" />
 
             <TextView
@@ -286,7 +286,7 @@
         android:maxLines="1"
         android:ellipsize="end"
         android:text="7:40"
-        android:textColor="#FFFFFFFF"
+        android:textColor="#FFF5E6C8"
         android:textSize="14sp"
         android:textStyle="bold" />
         </LinearLayout>

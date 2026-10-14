@@ -2,6 +2,7 @@ package com.ibadalrahman.app.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.compose.runtime.mutableLongStateOf
 import com.ibadalrahman.app.core.CalculationMethod
 import com.ibadalrahman.app.core.CalculationParameters
 import com.ibadalrahman.app.core.Coordinates
@@ -23,20 +24,36 @@ enum class AlertMode { ADHAN, NOTIFICATION, SILENT }
 /** What the status-bar icon shows next to the clock. */
 enum class StatusStyle { NAME_COUNTDOWN, COUNTDOWN, NAME_TIME, TIME }
 
+/** How large the status-bar text is drawn; larger sizes condense the glyphs to fill the icon. */
+enum class StatusTextSize { NORMAL, LARGE, HUGE }
+
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
 /**
  * All user preferences. Backed by SharedPreferences so that receivers, services and widgets can
- * read them synchronously; [version] lets Compose observe changes.
+ * read them synchronously.
+ *
+ * Every read also reads a Compose snapshot counter, so any composable (however deeply nested, and
+ * despite strong skipping) that displays a preference recomposes as soon as that preference changes.
+ * [version] exposes the same counter as a flow for non-Compose observers and remember() keys.
  */
 class Settings private constructor(private val prefs: SharedPreferences) {
 
     private val _version = MutableStateFlow(0L)
     val version: StateFlow<Long> = _version
+    private val observed = mutableLongStateOf(0L)
 
     // Held strongly: SharedPreferences only keeps a weak reference to listeners.
     private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key !in volatileKeys) _version.value = _version.value + 1
+        if (key !in volatileKeys) {
+            _version.value = _version.value + 1
+            observed.longValue = observed.longValue + 1
+        }
+    }
+
+    /** Registers a snapshot read so the calling composable is invalidated on any preference change. */
+    private fun track() {
+        observed.longValue
     }
 
     init {
@@ -73,14 +90,21 @@ class Settings private constructor(private val prefs: SharedPreferences) {
     var ramadanIshaExtra by bool("ramadan_isha_extra", true)
     var hijriAdjustment by int("hijri_adjustment", 0)
 
-    fun offset(prayer: Prayer): Int = prefs.getInt("offset_${prayer.name}", 0)
+    fun offset(prayer: Prayer): Int {
+        track()
+        return prefs.getInt("offset_${prayer.name}", 0)
+    }
+
     fun setOffset(prayer: Prayer, minutes: Int) = prefs.edit().putInt("offset_${prayer.name}", minutes).apply()
 
     // ---------------------------------------------------------------- adhan & alerts
-    fun alertMode(prayer: Prayer): AlertMode = enumValue(
-        prefs.getString("alert_${prayer.name}", null),
-        if (prayer == Prayer.SUNRISE) AlertMode.SILENT else AlertMode.ADHAN,
-    )
+    fun alertMode(prayer: Prayer): AlertMode {
+        track()
+        return enumValue(
+            prefs.getString("alert_${prayer.name}", null),
+            if (prayer == Prayer.SUNRISE) AlertMode.SILENT else AlertMode.ADHAN,
+        )
+    }
 
     fun setAlertMode(prayer: Prayer, mode: AlertMode) = prefs.edit().putString("alert_${prayer.name}", mode.name).apply()
 
@@ -97,11 +121,19 @@ class Settings private constructor(private val prefs: SharedPreferences) {
 
     var reminderEnabled by bool("reminder_enabled", true)
     var reminderMinutes by int("reminder_minutes", 10)
-    fun reminderFor(prayer: Prayer): Boolean = prefs.getBoolean("reminder_${prayer.name}", prayer.isSalah)
+    fun reminderFor(prayer: Prayer): Boolean {
+        track()
+        return prefs.getBoolean("reminder_${prayer.name}", prayer.isSalah)
+    }
+
     fun setReminderFor(prayer: Prayer, enabled: Boolean) = prefs.edit().putBoolean("reminder_${prayer.name}", enabled).apply()
 
     var iqamaEnabled by bool("iqama_enabled", false)
-    fun iqamaMinutes(prayer: Prayer): Int = prefs.getInt("iqama_${prayer.name}", defaultIqama(prayer))
+    fun iqamaMinutes(prayer: Prayer): Int {
+        track()
+        return prefs.getInt("iqama_${prayer.name}", defaultIqama(prayer))
+    }
+
     fun setIqamaMinutes(prayer: Prayer, minutes: Int) = prefs.edit().putInt("iqama_${prayer.name}", minutes).apply()
 
     var silentEnabled by bool("silent_enabled", false)
@@ -111,11 +143,12 @@ class Settings private constructor(private val prefs: SharedPreferences) {
 
     // ---------------------------------------------------------------- status bar & widgets
     var statusBarEnabled by bool("status_bar_enabled", true)
-    var statusStyle by enum("status_style", StatusStyle.NAME_COUNTDOWN)
+    var statusStyle by enum("status_style", StatusStyle.COUNTDOWN)
+    var statusTextSize by enum("status_text_size", StatusTextSize.LARGE)
     var statusIncludeSunrise by bool("status_include_sunrise", true)
 
-    var widgetThemeDefault by enum("widget_theme_default", WidgetTheme.NIGHT)
-    var widgetOpacityDefault by int("widget_opacity_default", 75)
+    var widgetThemeDefault by enum("widget_theme_default", WidgetTheme.ANDALUS)
+    var widgetOpacityDefault by int("widget_opacity_default", 85)
 
     // ---------------------------------------------------------------- tasbih
     var tasbihCount by int("tasbih_count", 0)
@@ -161,39 +194,61 @@ class Settings private constructor(private val prefs: SharedPreferences) {
 
     // ---------------------------------------------------------------- delegates
     private fun bool(key: String, def: Boolean) = object : ReadWriteProperty<Any?, Boolean> {
-        override fun getValue(thisRef: Any?, property: KProperty<*>) = prefs.getBoolean(key, def)
+        override fun getValue(thisRef: Any?, property: KProperty<*>): Boolean {
+            track()
+            return prefs.getBoolean(key, def)
+        }
+
         override fun setValue(thisRef: Any?, property: KProperty<*>, value: Boolean) =
             prefs.edit().putBoolean(key, value).apply()
     }
 
     private fun int(key: String, def: Int) = object : ReadWriteProperty<Any?, Int> {
-        override fun getValue(thisRef: Any?, property: KProperty<*>) = prefs.getInt(key, def)
+        override fun getValue(thisRef: Any?, property: KProperty<*>): Int {
+            track()
+            return prefs.getInt(key, def)
+        }
+
         override fun setValue(thisRef: Any?, property: KProperty<*>, value: Int) =
             prefs.edit().putInt(key, value).apply()
     }
 
     private fun long(key: String, def: Long) = object : ReadWriteProperty<Any?, Long> {
-        override fun getValue(thisRef: Any?, property: KProperty<*>) = prefs.getLong(key, def)
+        override fun getValue(thisRef: Any?, property: KProperty<*>): Long {
+            track()
+            return prefs.getLong(key, def)
+        }
+
         override fun setValue(thisRef: Any?, property: KProperty<*>, value: Long) =
             prefs.edit().putLong(key, value).apply()
     }
 
     private fun double(key: String, def: Double) = object : ReadWriteProperty<Any?, Double> {
-        override fun getValue(thisRef: Any?, property: KProperty<*>): Double =
-            if (prefs.contains(key)) Double.fromBits(prefs.getLong(key, 0L)) else def
+        override fun getValue(thisRef: Any?, property: KProperty<*>): Double {
+            track()
+            return if (prefs.contains(key)) Double.fromBits(prefs.getLong(key, 0L)) else def
+        }
 
         override fun setValue(thisRef: Any?, property: KProperty<*>, value: Double) =
             prefs.edit().putLong(key, value.toRawBits()).apply()
     }
 
     private fun string(key: String, def: String) = object : ReadWriteProperty<Any?, String> {
-        override fun getValue(thisRef: Any?, property: KProperty<*>) = prefs.getString(key, def) ?: def
+        override fun getValue(thisRef: Any?, property: KProperty<*>): String {
+            track()
+            return prefs.getString(key, def) ?: def
+        }
+
         override fun setValue(thisRef: Any?, property: KProperty<*>, value: String) =
             prefs.edit().putString(key, value).apply()
     }
 
     private inline fun <reified E : Enum<E>> enum(key: String, def: E) = object : ReadWriteProperty<Any?, E> {
-        override fun getValue(thisRef: Any?, property: KProperty<*>): E = enumValue(prefs.getString(key, null), def)
+        override fun getValue(thisRef: Any?, property: KProperty<*>): E {
+            track()
+            return enumValue(prefs.getString(key, null), def)
+        }
+
         override fun setValue(thisRef: Any?, property: KProperty<*>, value: E) =
             prefs.edit().putString(key, value.name).apply()
     }

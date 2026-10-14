@@ -119,8 +119,13 @@ object WidgetRenderer {
         // Background colour and transparency.
         views.setInt(R.id.w_bg, "setColorFilter", theme.background)
         views.setInt(R.id.w_bg, "setImageAlpha", (opacity.coerceIn(0, 100) * 255) / 100)
-        views.setViewVisibility(R.id.w_border, if (theme == WidgetTheme.GLASS || opacity < 35) View.VISIBLE else View.GONE)
-        views.setInt(R.id.w_border, "setColorFilter", ColorUtils.setAlphaComponent(theme.text, 90))
+        // Thin gold rim, as on the brand tiles (a neutral rim for the glass theme).
+        views.setViewVisibility(R.id.w_border, View.VISIBLE)
+        views.setInt(
+            R.id.w_border,
+            "setColorFilter",
+            if (theme == WidgetTheme.GLASS) ColorUtils.setAlphaComponent(theme.text, 90) else ColorUtils.setAlphaComponent(theme.accent, 150),
+        )
         views.setOnClickPendingIntent(R.id.widget_root, Notifications.openAppIntent(context, 10 + kind.ordinal))
 
         fun chrono(id: Int) {

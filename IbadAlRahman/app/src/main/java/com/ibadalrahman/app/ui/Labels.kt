@@ -5,6 +5,7 @@ import com.ibadalrahman.app.core.HighLatitudeRule
 import com.ibadalrahman.app.core.Madhab
 import com.ibadalrahman.app.data.AlertMode
 import com.ibadalrahman.app.data.StatusStyle
+import com.ibadalrahman.app.data.StatusTextSize
 import com.ibadalrahman.app.data.ThemeMode
 import com.ibadalrahman.app.data.WidgetTheme
 
@@ -64,6 +65,18 @@ object Labels {
         StatusStyle.TIME -> "وقت الصلاة القادمة فقط"
     }
 
+    fun statusTextSize(s: StatusTextSize): String = when (s) {
+        StatusTextSize.NORMAL -> "عادي"
+        StatusTextSize.LARGE -> "كبير — بحجم أرقام الساعة"
+        StatusTextSize.HUGE -> "ضخم"
+    }
+
+    fun statusTextSizeHint(s: StatusTextSize): String = when (s) {
+        StatusTextSize.NORMAL -> "أرقام بعرضها الطبيعي"
+        StatusTextSize.LARGE -> "أرقام مضغوطة قليلًا لتملأ ارتفاع الشريط"
+        StatusTextSize.HUGE -> "أكبر حجم ممكن، أرقام طويلة ونحيفة"
+    }
+
     fun theme(t: ThemeMode): String = when (t) {
         ThemeMode.SYSTEM -> "حسب النظام"
         ThemeMode.LIGHT -> "فاتح"
@@ -71,10 +84,10 @@ object Labels {
     }
 
     fun widgetTheme(t: WidgetTheme): String = when (t) {
+        WidgetTheme.ANDALUS -> "أندلسي"
         WidgetTheme.NIGHT -> "ليلي"
-        WidgetTheme.EMERALD -> "زمردي"
-        WidgetTheme.GOLD -> "ذهبي"
+        WidgetTheme.ROYAL -> "ملكي"
         WidgetTheme.GLASS -> "زجاجي"
-        WidgetTheme.LIGHT -> "فاتح"
+        WidgetTheme.CREAM -> "عاجي"
     }
 }

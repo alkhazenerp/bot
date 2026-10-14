@@ -46,7 +46,7 @@
         android:maxLines="1"
         android:ellipsize="end"
         android:text="العصر"
-        android:textColor="#FFFFFFFF"
+        android:textColor="#FFF5E6C8"
         android:textSize="18sp"
         android:textStyle="bold" />
 
@@ -57,7 +57,7 @@
         android:maxLines="1"
         android:ellipsize="end"
         android:text="3:15 م"
-        android:textColor="#FFE8C468"
+        android:textColor="#FFE3C35A"
         android:textSize="13sp"
         android:textStyle="bold" />
 
@@ -66,7 +66,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layoutDirection="ltr"
-        android:textColor="#FFFFFFFF"
+        android:textColor="#FFF5E6C8"
         android:textSize="15sp"
         android:textStyle="bold" />
     </LinearLayout>

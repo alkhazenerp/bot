@@ -1,5 +1,6 @@
 package com.ibadalrahman.app.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -124,6 +125,7 @@ fun SectionCard(title: String? = null, modifier: Modifier = Modifier, content: @
         Card(
             shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(Modifier.padding(vertical = 4.dp), content = content)

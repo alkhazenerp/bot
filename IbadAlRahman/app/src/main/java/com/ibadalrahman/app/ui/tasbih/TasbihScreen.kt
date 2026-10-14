@@ -51,7 +51,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ibadalrahman.app.data.Settings
 import com.ibadalrahman.app.ui.components.ProgressRing
-import com.ibadalrahman.app.ui.theme.EmeraldDark
+import com.ibadalrahman.app.ui.theme.Teal
+import com.ibadalrahman.app.ui.theme.TealDeep
 import com.ibadalrahman.app.ui.theme.Gold
 import com.ibadalrahman.app.ui.theme.Ruqaa
 import com.ibadalrahman.app.util.Format
@@ -150,7 +151,7 @@ fun TasbihScreen(modifier: Modifier) {
                 Modifier
                     .fillMaxSize(0.84f)
                     .clip(CircleShape)
-                    .background(Brush.radialGradient(listOf(Color(0xFF1F7A60), EmeraldDark)))
+                    .background(Brush.radialGradient(listOf(Color(0xFF1B6E66), Teal, TealDeep)))
                     .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { tap() },
                 contentAlignment = Alignment.Center,
             ) {

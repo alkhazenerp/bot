@@ -94,9 +94,11 @@ private fun MainScaffold() {
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+                // Pill indicator in the brand turquoise/teal, as in the identity sheet.
                 val colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.onPrimary,
-                    indicatorColor = MaterialTheme.colorScheme.primary,
+                    selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
                 )
                 NavigationBarItem(
                     selected = tab == Tab.HOME, onClick = { tab = Tab.HOME }, colors = colors,

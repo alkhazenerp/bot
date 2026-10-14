@@ -10,11 +10,12 @@ enum class WidgetTheme(
     val accent: Int,
     val isLight: Boolean,
 ) {
-    NIGHT(0xFF0B1B2B.toInt(), 0xFFFFFFFF.toInt(), 0xFFB8C4D0.toInt(), 0xFFE8C468.toInt(), false),
-    EMERALD(0xFF0E3B2E.toInt(), 0xFFFFFFFF.toInt(), 0xFFCFE3D9.toInt(), 0xFFF2D27A.toInt(), false),
-    GOLD(0xFF2A1F0B.toInt(), 0xFFFFF6E0.toInt(), 0xFFE3D3A8.toInt(), 0xFFF5C542.toInt(), false),
-    GLASS(0xFF000000.toInt(), 0xFFFFFFFF.toInt(), 0xFFE6E6E6.toInt(), 0xFFFFD54F.toInt(), false),
-    LIGHT(0xFFFFFFFF.toInt(), 0xFF1B1B1B.toInt(), 0xFF5F6B66.toInt(), 0xFF0F6B4A.toInt(), true),
+    /** Brand deep teal with gold, the default. */
+    ANDALUS(0xFF0E4D47.toInt(), 0xFFF5E6C8.toInt(), 0xFFA8DCD4.toInt(), 0xFFE3C35A.toInt(), false),
+    NIGHT(0xFF061A18.toInt(), 0xFFFFFFFF.toInt(), 0xFF9FBDB7.toInt(), 0xFFE3C35A.toInt(), false),
+    ROYAL(0xFF4B3A7A.toInt(), 0xFFF5E6C8.toInt(), 0xFFD3CAF0.toInt(), 0xFFF1CF63.toInt(), false),
+    GLASS(0xFF000000.toInt(), 0xFFFFFFFF.toInt(), 0xFFE6E6E6.toInt(), 0xFF6ED1C5.toInt(), false),
+    CREAM(0xFFF5E6C8.toInt(), 0xFF0E4D47.toInt(), 0xFF6B5B3E.toInt(), 0xFF9C7A1C.toInt(), true),
 }
 
 /** Per-widget appearance, keyed by appWidgetId; falls back to the app-wide defaults. */

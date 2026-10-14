@@ -50,11 +50,18 @@ import com.ibadalrahman.app.data.LocationHelper
 import com.ibadalrahman.app.data.LocationMode
 import com.ibadalrahman.app.data.LocationResult
 import com.ibadalrahman.app.data.Settings
-import com.ibadalrahman.app.ui.settings.AppLogo
 import com.ibadalrahman.app.ui.settings.CityList
 import com.ibadalrahman.app.ui.settings.applyCity
-import com.ibadalrahman.app.ui.theme.EmeraldDark
 import com.ibadalrahman.app.ui.theme.Gold
+import com.ibadalrahman.app.ui.theme.GoldGradient
+import com.ibadalrahman.app.ui.theme.GoldLight
+import com.ibadalrahman.app.ui.theme.Teal
+import com.ibadalrahman.app.ui.theme.TealNight
+import com.ibadalrahman.app.ui.components.GirihPattern
+import com.ibadalrahman.app.ui.components.OrnamentDivider
+import com.ibadalrahman.app.R
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
 import com.ibadalrahman.app.ui.theme.Ruqaa
 import com.ibadalrahman.app.util.Permissions
 
@@ -132,8 +139,9 @@ fun OnboardingScreen() {
     Box(
         Modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFF041915), EmeraldDark, Color(0xFF1F7A60)))),
+            .background(Brush.verticalGradient(listOf(TealNight, Teal, Color(0xFF145C55)))),
     ) {
+        GirihPattern(Modifier.matchParentSize(), color = Gold.copy(alpha = 0.08f), cell = 40.dp)
         Column(
             Modifier
                 .fillMaxSize()
@@ -145,9 +153,14 @@ fun OnboardingScreen() {
             verticalArrangement = Arrangement.Center,
         ) {
             Spacer(Modifier.height(24.dp))
-            AppLogo(Modifier.size(150.dp))
+            Image(
+                painterResource(R.drawable.logo_mark),
+                contentDescription = null,
+                modifier = Modifier.size(width = 130.dp, height = 176.dp),
+            )
             Spacer(Modifier.height(12.dp))
-            Text("عباد الرحمن", style = TextStyle(fontFamily = Ruqaa, fontSize = 52.sp), color = Gold)
+            Text("عباد الرحمن", style = TextStyle(fontFamily = Ruqaa, fontSize = 52.sp, brush = GoldGradient))
+            OrnamentDivider(lineWidth = 90.dp, color = GoldLight)
             Text(
                 "مواقيت الصلاة والأذان، والعد التنازلي للصلاة القادمة بجانب الساعة",
                 color = Color.White.copy(alpha = 0.9f),
@@ -178,7 +191,7 @@ fun OnboardingScreen() {
                     }
                 },
                 enabled = !busy,
-                colors = ButtonDefaults.buttonColors(containerColor = Gold, contentColor = Color(0xFF2A1F00)),
+                colors = ButtonDefaults.buttonColors(containerColor = GoldLight, contentColor = Color(0xFF2A2000)),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp),

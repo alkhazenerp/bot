@@ -86,6 +86,11 @@ class StatusBarService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+        if (!Settings.get(this).statusBarEnabled) {
+            // Disabled while this start command was in flight.
+            stopNow()
+            return START_NOT_STICKY
+        }
         handler.removeCallbacks(tick)
         scheduleTick()
         return START_STICKY
@@ -94,6 +99,14 @@ class StatusBarService : Service() {
     fun refreshNow() {
         handler.removeCallbacks(tick)
         tick.run()
+    }
+
+    /** Removes the countdown from the status bar immediately and ends the service. */
+    fun stopNow() {
+        handler.removeCallbacks(tick)
+        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        getSystemService(NotificationManager::class.java)?.cancel(Notifications.ID_STATUS)
+        stopSelf()
     }
 
     private fun scheduleTick() {
@@ -106,7 +119,7 @@ class StatusBarService : Service() {
     private fun update() {
         val s = Settings.get(this)
         if (!s.statusBarEnabled) {
-            stopSelf()
+            stopNow()
             return
         }
         val snapshot = PrayerRepository.snapshot(this, includeSunrise = s.statusIncludeSunrise)
@@ -127,7 +140,7 @@ class StatusBarService : Service() {
         val next = snapshot.status.next
         val nextName = Format.prayerName(next.prayer, snapshot.nextIsFriday)
         val remaining = snapshot.status.remainingMillis(snapshot.now)
-        val icon = StatusIconRenderer.render(StatusIconRenderer.lines(s.statusStyle, snapshot, fmt))
+        val icon = StatusIconRenderer.render(StatusIconRenderer.lines(s.statusStyle, snapshot, fmt), s.statusTextSize)
 
         val title = "$nextName ${fmt.time(next.time, snapshot.zone)}"
         val subtitle = "متبقي ${fmt.remainingWords(remaining)} • ${snapshot.locationName}"
@@ -142,7 +155,7 @@ class StatusBarService : Service() {
             .setShowWhen(false)
             .setCategory(Notification.CATEGORY_STATUS)
             .setVisibility(Notification.VISIBILITY_PUBLIC)
-            .setColor(0xFFC9A227.toInt())
+            .setColor(0xFFD4AF37.toInt())
             .setCustomContentView(collapsedView(snapshot, fmt, title))
             .setCustomBigContentView(expandedView(snapshot, fmt, title))
             .setStyle(Notification.DecoratedCustomViewStyle())
@@ -202,18 +215,25 @@ class StatusBarService : Service() {
             val s = Settings.get(context)
             val running = instance
             if (!s.statusBarEnabled || !Notifications.canPost(context)) {
-                if (running != null) context.stopService(Intent(context, StatusBarService::class.java))
+                if (running != null) {
+                    running.handler.post { running.stopNow() }
+                } else {
+                    context.stopService(Intent(context, StatusBarService::class.java))
+                    context.getSystemService(NotificationManager::class.java)?.cancel(Notifications.ID_STATUS)
+                }
                 return
             }
-            if (running != null) {
-                running.handler.post { running.refreshNow() }
-            } else if (allowStart) {
+            if (allowStart) {
+                // Always send a start command: it also revives an instance that was just asked to
+                // stop but has not been destroyed yet (toggling off and on quickly).
                 try {
                     ContextCompat.startForegroundService(context, Intent(context, StatusBarService::class.java))
+                    return
                 } catch (e: Exception) {
                     Log.w(TAG, "Not allowed to start the status bar service now", e)
                 }
             }
+            running?.let { service -> service.handler.post { service.refreshNow() } }
         }
     }
 }

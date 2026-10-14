@@ -70,11 +70,24 @@ import com.ibadalrahman.app.ui.Labels
 import com.ibadalrahman.app.ui.Route
 import com.ibadalrahman.app.ui.components.Banner
 import com.ibadalrahman.app.ui.components.LocalSettingsVersion
-import com.ibadalrahman.app.ui.components.MosqueSilhouette
 import com.ibadalrahman.app.ui.components.PrayerGlyph
 import com.ibadalrahman.app.ui.components.rememberApplySettings
 import com.ibadalrahman.app.ui.components.settings
 import com.ibadalrahman.app.ui.theme.Gold
+import androidx.compose.foundation.border
+import androidx.compose.ui.platform.LocalDensity
+import com.ibadalrahman.app.ui.components.ArcadeSilhouette
+import com.ibadalrahman.app.ui.components.BrandHeader
+import com.ibadalrahman.app.ui.components.GirihPattern
+import com.ibadalrahman.app.ui.components.SparkleStar
+import com.ibadalrahman.app.ui.components.archShape
+import com.ibadalrahman.app.ui.theme.Cream
+import com.ibadalrahman.app.ui.theme.GoldDeep
+import com.ibadalrahman.app.ui.theme.GoldGradient
+import com.ibadalrahman.app.ui.theme.GoldLight
+import com.ibadalrahman.app.ui.theme.Royal
+import com.ibadalrahman.app.ui.theme.Teal
+import com.ibadalrahman.app.ui.theme.TealDeep
 import com.ibadalrahman.app.ui.theme.Ruqaa
 import com.ibadalrahman.app.util.Format
 import com.ibadalrahman.app.util.Permissions
@@ -123,6 +136,7 @@ fun HomeScreen(modifier: Modifier, navigate: (Route) -> Unit) {
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+        item { BrandHeader(Modifier.fillMaxWidth(), logoSize = 58.dp, wordmarkSize = 30) }
         item { HeroCard(snapshot, now, fmt, onLocationClick = { navigate(Route.LOCATION) }) }
 
         item {
@@ -212,13 +226,13 @@ fun HomeScreen(modifier: Modifier, navigate: (Route) -> Unit) {
     }
 }
 
-private fun heroColors(previous: Prayer): List<Color> = when (previous) {
-    Prayer.FAJR -> listOf(Color(0xFF26335F), Color(0xFF6A5A8E), Color(0xFFD99A7C))
-    Prayer.SUNRISE -> listOf(Color(0xFF1E6FA8), Color(0xFF4FA3D1), Color(0xFF9AD3EA))
-    Prayer.DHUHR -> listOf(Color(0xFF0F5E8C), Color(0xFF2C8BC0), Color(0xFF7CC4E4))
-    Prayer.ASR -> listOf(Color(0xFF8A4B1D), Color(0xFFC9772E), Color(0xFFEAB45C))
-    Prayer.MAGHRIB -> listOf(Color(0xFF2E1F4F), Color(0xFF7A3A64), Color(0xFFE0714A))
-    Prayer.ISHA -> listOf(Color(0xFF061325), Color(0xFF0F2A45), Color(0xFF16465A))
+/** A subtle tint over the brand teal that follows the time of day. */
+private fun heroTint(previous: Prayer): Color = when (previous) {
+    Prayer.FAJR -> Color(0xFF2E4A6B)
+    Prayer.SUNRISE, Prayer.DHUHR -> Color(0xFF1E7F78)
+    Prayer.ASR -> Color(0xFF6B6330)
+    Prayer.MAGHRIB -> Royal
+    Prayer.ISHA -> Color(0xFF0B2A33)
 }
 
 @Composable
@@ -226,42 +240,37 @@ private fun HeroCard(snapshot: PrayerSnapshot, now: Long, fmt: Format, onLocatio
     val next = snapshot.status.next
     val remaining = snapshot.status.remainingMillis(now)
     val white = Color.White
+    val density = LocalDensity.current
+    val shape = remember(density) { with(density) { archShape(archHeight = 64.dp.toPx(), cornerRadius = 28.dp.toPx()) } }
     Box(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(28.dp))
-            .background(Brush.verticalGradient(heroColors(snapshot.status.previous.prayer))),
+            .clip(shape)
+            .background(Brush.verticalGradient(listOf(heroTint(snapshot.status.previous.prayer), Teal, TealDeep)))
+            .border(1.5.dp, Brush.verticalGradient(listOf(GoldLight, Gold, GoldDeep)), shape),
     ) {
-        MosqueSilhouette(
+        GirihPattern(Modifier.matchParentSize(), color = Gold.copy(alpha = 0.09f), cell = 38.dp)
+        ArcadeSilhouette(
             Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .height(78.dp),
+                .height(86.dp),
         )
-        Column(Modifier.padding(20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Row(
-                    Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable(onClick = onLocationClick)
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(Icons.Filled.LocationOn, contentDescription = null, tint = Gold, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text(snapshot.locationName, color = white, style = MaterialTheme.typography.titleSmall, maxLines = 1)
-                }
-                Text(fmt.gregorian(snapshot.date), color = white.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
-            }
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp, top = 30.dp, bottom = 18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            SparkleStar(Modifier.size(14.dp), GoldLight)
             Text(
                 fmt.hijri(snapshot.hijri),
-                color = Gold,
-                style = TextStyle(fontFamily = Ruqaa, fontSize = 24.sp, fontWeight = FontWeight.Bold),
-                modifier = Modifier.padding(top = 6.dp),
+                style = TextStyle(fontFamily = Ruqaa, fontSize = 25.sp, fontWeight = FontWeight.Bold, brush = GoldGradient),
+                modifier = Modifier.padding(top = 4.dp),
             )
+            Text(fmt.gregorian(snapshot.date), color = Cream.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
             Spacer(Modifier.height(14.dp))
-            Text("الصلاة القادمة", color = white.copy(alpha = 0.8f), style = MaterialTheme.typography.labelLarge)
+            Text("الصلاة القادمة", color = Cream.copy(alpha = 0.8f), style = MaterialTheme.typography.labelLarge)
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
                     Format.prayerName(next.prayer, snapshot.nextIsFriday),
@@ -271,7 +280,7 @@ private fun HeroCard(snapshot: PrayerSnapshot, now: Long, fmt: Format, onLocatio
                 Spacer(Modifier.width(12.dp))
                 Text(
                     fmt.time(next.time, snapshot.zone),
-                    color = Gold,
+                    color = GoldLight,
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.padding(bottom = 6.dp),
                 )
@@ -286,18 +295,31 @@ private fun HeroCard(snapshot: PrayerSnapshot, now: Long, fmt: Format, onLocatio
                     fontFeatureSettings = "tnum",
                 ),
             )
-            Text("متبقي ${fmt.remainingWords(remaining)}", color = white.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium)
+            Text("متبقي ${fmt.remainingWords(remaining)}", color = Cream.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(12.dp))
             LinearProgressIndicator(
                 progress = { snapshot.status.progress(now) },
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .fillMaxWidth(0.82f)
                     .height(6.dp)
                     .clip(RoundedCornerShape(3.dp)),
-                color = Gold,
-                trackColor = white.copy(alpha = 0.25f),
+                color = GoldLight,
+                trackColor = white.copy(alpha = 0.22f),
             )
-            Spacer(Modifier.height(64.dp))
+            Spacer(Modifier.height(14.dp))
+            Row(
+                Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.Black.copy(alpha = 0.22f))
+                    .clickable(onClick = onLocationClick)
+                    .padding(horizontal = 14.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Filled.LocationOn, contentDescription = null, tint = GoldLight, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(snapshot.locationName, color = Cream, style = MaterialTheme.typography.titleSmall, maxLines = 1)
+            }
+            Spacer(Modifier.height(44.dp))
         }
     }
 }
@@ -359,8 +381,8 @@ private fun PrayerRow(
     val scheme = MaterialTheme.colorScheme
     Surface(
         shape = RoundedCornerShape(18.dp),
-        color = if (isNext) scheme.primary.copy(alpha = 0.14f) else scheme.surfaceContainer,
-        border = if (isNext) BorderStroke(1.5.dp, scheme.primary) else null,
+        color = if (isNext) scheme.primaryContainer else scheme.surfaceContainer,
+        border = if (isNext) BorderStroke(1.5.dp, Brush.horizontalGradient(listOf(GoldLight, Gold, GoldDeep))) else null,
         modifier = Modifier
             .fillMaxWidth()
             .alpha(if (passed && !isNext) 0.6f else 1f),
@@ -387,7 +409,7 @@ private fun PrayerRow(
             Text(
                 fmt.time(times[prayer], times.zone),
                 style = MaterialTheme.typography.titleLarge,
-                color = if (isNext) scheme.primary else scheme.onSurface,
+                color = if (isNext) scheme.onPrimaryContainer else scheme.onSurface,
             )
             IconButton(onClick = onToggleMode) {
                 when (mode) {

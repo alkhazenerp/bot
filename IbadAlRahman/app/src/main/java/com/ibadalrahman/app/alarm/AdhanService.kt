@@ -180,7 +180,7 @@ class AdhanService : Service() {
         val text = "${s.locationName} • ${fmt.time(currentTime, s.zone())}"
         val builder = NotificationCompat.Builder(this, Notifications.CHANNEL_ADHAN)
             .setSmallIcon(R.drawable.ic_stat_minaret)
-            .setColor(0xFFC9A227.toInt())
+            .setColor(0xFFD4AF37.toInt())
             .setContentTitle(title)
             .setContentText(text)
             .setContentIntent(Notifications.openAppIntent(this, 2))

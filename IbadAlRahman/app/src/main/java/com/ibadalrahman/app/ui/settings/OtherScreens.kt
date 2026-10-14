@@ -10,6 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -70,13 +71,16 @@ import com.ibadalrahman.app.core.Prayer
 import com.ibadalrahman.app.data.PrayerRepository
 import com.ibadalrahman.app.data.PrayerSnapshot
 import com.ibadalrahman.app.data.StatusStyle
+import com.ibadalrahman.app.data.StatusTextSize
 import com.ibadalrahman.app.data.ThemeMode
 import com.ibadalrahman.app.data.WidgetPrefs
 import com.ibadalrahman.app.data.WidgetTheme
 import com.ibadalrahman.app.statusbar.StatusBarService
 import com.ibadalrahman.app.statusbar.StatusIconRenderer
 import com.ibadalrahman.app.ui.Labels
+import com.ibadalrahman.app.ui.components.DedicationFooter
 import com.ibadalrahman.app.ui.components.LocalSettingsVersion
+import com.ibadalrahman.app.ui.components.OrnamentDivider
 import com.ibadalrahman.app.ui.components.SectionCard
 import com.ibadalrahman.app.ui.components.SettingItem
 import com.ibadalrahman.app.ui.components.SubPage
@@ -84,6 +88,7 @@ import com.ibadalrahman.app.ui.components.SwitchItem
 import com.ibadalrahman.app.ui.components.rememberApplySettings
 import com.ibadalrahman.app.ui.components.settings
 import com.ibadalrahman.app.ui.theme.Gold
+import com.ibadalrahman.app.ui.theme.GoldGradient
 import com.ibadalrahman.app.ui.theme.Ruqaa
 import com.ibadalrahman.app.util.Format
 import com.ibadalrahman.app.util.Permissions
@@ -103,7 +108,7 @@ fun StatusBarScreen(onBack: () -> Unit) {
     val notificationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { apply() }
 
     SubPage("شريط الحالة", onBack) {
-        StatusBarMock(StatusIconRenderer.lines(s.statusStyle, snapshot, fmt))
+        StatusBarMock(StatusIconRenderer.lines(s.statusStyle, snapshot, fmt), s.statusTextSize)
         Text(
             "يظهر الوقت المتبقي للصلاة القادمة بجانب الساعة تمامًا مثل عدّاد سرعة الإنترنت، ويتحدّث كل دقيقة. " +
                 "اسحب شريط الإشعارات لرؤية جميع أوقات اليوم.",
@@ -139,7 +144,30 @@ fun StatusBarScreen(onBack: () -> Unit) {
                     RadioButton(selected = s.statusStyle == style, onClick = null)
                     Spacer(Modifier.width(8.dp))
                     Text(Labels.statusStyle(style), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                    StatusIconChip(lines, 40)
+                    StatusIconChip(lines, s.statusTextSize, 40)
+                }
+            }
+        }
+        SectionCard("حجم الخط") {
+            val lines = StatusIconRenderer.lines(s.statusStyle, snapshot, fmt)
+            StatusTextSize.entries.forEach { size ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .selectable(selected = s.statusTextSize == size, role = Role.RadioButton) {
+                            s.statusTextSize = size
+                            apply()
+                        }
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(selected = s.statusTextSize == size, onClick = null)
+                    Spacer(Modifier.width(8.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(Labels.statusTextSize(size), style = MaterialTheme.typography.bodyLarge)
+                        Text(Labels.statusTextSizeHint(size), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    StatusIconChip(lines, size, 40)
                 }
             }
         }
@@ -153,8 +181,8 @@ fun StatusBarScreen(onBack: () -> Unit) {
 }
 
 @Composable
-private fun StatusIconChip(lines: StatusIconRenderer.Lines, sizeDp: Int) {
-    val bitmap = remember(lines) { StatusIconRenderer.render(lines, 128).asImageBitmap() }
+private fun StatusIconChip(lines: StatusIconRenderer.Lines, textSize: StatusTextSize, sizeDp: Int) {
+    val bitmap = remember(lines, textSize) { StatusIconRenderer.render(lines, textSize).asImageBitmap() }
     Box(
         Modifier
             .clip(RoundedCornerShape(10.dp))
@@ -165,10 +193,10 @@ private fun StatusIconChip(lines: StatusIconRenderer.Lines, sizeDp: Int) {
     }
 }
 
-/** A fake phone status bar showing exactly what the user will get. */
+/** A fake phone status bar (clock and icon at their real relative sizes). */
 @Composable
-private fun StatusBarMock(lines: StatusIconRenderer.Lines) {
-    val bitmap = remember(lines) { StatusIconRenderer.render(lines, 128).asImageBitmap() }
+private fun StatusBarMock(lines: StatusIconRenderer.Lines, textSize: StatusTextSize) {
+    val bitmap = remember(lines, textSize) { StatusIconRenderer.render(lines, textSize).asImageBitmap() }
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Row(
             Modifier
@@ -178,9 +206,9 @@ private fun StatusBarMock(lines: StatusIconRenderer.Lines) {
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("12:30", color = Color.White, style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Medium))
-            Spacer(Modifier.width(8.dp))
-            Image(bitmap, contentDescription = null, modifier = Modifier.size(26.dp))
+            Text("12:30", color = Color.White, style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium))
+            Spacer(Modifier.width(6.dp))
+            Image(bitmap, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.weight(1f))
             Canvas(Modifier.size(width = 46.dp, height = 14.dp)) {
                 // signal bars
@@ -318,7 +346,12 @@ fun WidgetPreview(kind: WidgetKind, theme: WidgetTheme, opacity: Int, snapshot: 
         Box(
             widgetModifier
                 .clip(RoundedCornerShape(22.dp))
-                .background(Color(theme.background).copy(alpha = opacity / 100f)),
+                .background(Color(theme.background).copy(alpha = opacity / 100f))
+                .border(
+                    1.2.dp,
+                    if (theme == WidgetTheme.GLASS) text.copy(alpha = 0.35f) else accent.copy(alpha = 0.6f),
+                    RoundedCornerShape(22.dp),
+                ),
             contentAlignment = Alignment.Center,
         ) {
             when (kind) {
@@ -511,7 +544,8 @@ fun AboutScreen(onBack: () -> Unit) {
     SubPage("حول التطبيق", onBack) {
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             AppLogo(Modifier.size(120.dp))
-            Text("عباد الرحمن", style = TextStyle(fontFamily = Ruqaa, fontSize = 40.sp), color = Gold)
+            Text("عباد الرحمن", style = TextStyle(fontFamily = Ruqaa, fontSize = 40.sp, brush = GoldGradient))
+            OrnamentDivider(lineWidth = 80.dp)
             Text("الإصدار $version", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(12.dp))
             Text(
@@ -531,20 +565,23 @@ fun AboutScreen(onBack: () -> Unit) {
                     "تعديل كل صلاة يدويًا، والإقامة، ووضع الاهتزاز أثناء الصلاة",
                     "القبلة، والتقويم الشهري، والتاريخ الهجري، والمسبحة",
                 ).forEach { Text("• $it", style = MaterialTheme.typography.bodyMedium) }
+                Text(
+                    "لا يجمع التطبيق أي بيانات، وكل الحسابات تتم على جهازك. " +
+                        "الخطوط: Tajawal و Aref Ruqaa و Noto Nastaliq برخصة SIL Open Font License.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
             }
         }
-        Text(
-            "الخطوط: Tajawal و Aref Ruqaa برخصة SIL Open Font License.\nلا يجمع التطبيق أي بيانات، وكل الحسابات تتم على جهازك.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        DedicationFooter(Modifier.padding(top = 4.dp, bottom = 8.dp))
     }
 }
 
-/** The launcher icon's two layers stacked and clipped to a circle. */
+/** The launcher icon's two layers stacked in a rounded tile, as on the home screen. */
 @Composable
 fun AppLogo(modifier: Modifier = Modifier) {
-    Box(modifier.clip(CircleShape)) {
+    Box(modifier.clip(RoundedCornerShape(26))) {
         Image(painterResource(R.mipmap.ic_launcher_background), contentDescription = null, modifier = Modifier.fillMaxSize())
         Image(painterResource(R.mipmap.ic_launcher_foreground), contentDescription = "عباد الرحمن", modifier = Modifier.fillMaxSize())
     }

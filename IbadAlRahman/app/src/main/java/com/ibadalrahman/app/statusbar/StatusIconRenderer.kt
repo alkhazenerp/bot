@@ -4,14 +4,20 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.Typeface
 import com.ibadalrahman.app.data.PrayerSnapshot
 import com.ibadalrahman.app.data.StatusStyle
+import com.ibadalrahman.app.data.StatusTextSize
 import com.ibadalrahman.app.util.Format
 
 /**
  * Draws the text that appears next to the clock, the same way network-speed meters do:
  * a white-on-transparent bitmap used as the notification's small icon (the system tints it).
+ *
+ * The system squeezes the icon into a small square, so the text is fitted to its tight glyph
+ * bounds (not the font's ascent/descent) and, for the larger sizes, condensed horizontally so the
+ * digits can use almost the full height of the icon, close to the size of the clock digits.
  */
 object StatusIconRenderer {
 
@@ -40,43 +46,79 @@ object StatusIconRenderer {
         return "${minutes / 60}:${(minutes % 60).toString().padStart(2, '0')}"
     }
 
-    fun render(lines: Lines, size: Int = 128, color: Int = Color.WHITE): Bitmap {
+    /** Narrowest horizontal scale allowed for each size; narrower glyphs can be drawn taller. */
+    private fun minScaleX(size: StatusTextSize): Float = when (size) {
+        StatusTextSize.NORMAL -> 1.0f
+        StatusTextSize.LARGE -> 0.66f
+        StatusTextSize.HUGE -> 0.5f
+    }
+
+    fun render(
+        lines: Lines,
+        textSize: StatusTextSize = StatusTextSize.LARGE,
+        size: Int = 192,
+        color: Int = Color.WHITE,
+    ): Bitmap {
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
             this.color = color
-            textAlign = Paint.Align.CENTER
+            textAlign = Paint.Align.LEFT
         }
-        val width = size * 0.98f
+        val s = size.toFloat()
+        val margin = if (textSize == StatusTextSize.NORMAL) s * 0.04f else s * 0.01f
+        val minScale = minScaleX(textSize)
         if (lines.secondary == null) {
             paint.typeface = condensedBold
-            drawFitted(canvas, paint, lines.primary, size / 2f, 0f, size.toFloat(), width, size * 0.80f)
+            // Digits have no descenders: let them use most of the height.
+            val band = if (textSize == StatusTextSize.NORMAL) 0.62f else 0.80f
+            val top = (s - s * band) / 2
+            drawFitted(canvas, paint, lines.primary, margin, top, s - margin, top + s * band, minScale)
         } else {
             paint.typeface = condensedBold
-            drawFitted(canvas, paint, lines.primary, size / 2f, 0f, size * 0.58f, width, size * 0.62f)
+            drawFitted(canvas, paint, lines.primary, margin, margin, s - margin, s * 0.60f, minScale)
             paint.typeface = bold
-            drawFitted(canvas, paint, lines.secondary, size / 2f, size * 0.56f, size.toFloat(), width, size * 0.42f)
+            drawFitted(canvas, paint, lines.secondary, margin, s * 0.68f, s - margin, s - margin, minScale.coerceAtLeast(0.8f))
         }
         return bitmap
     }
 
-    /** Draws [text] centred inside the band [top, bottom], shrinking it until it fits [maxWidth]. */
+    /**
+     * Draws [text] so that its tight bounds fill the box [left, top, right, bottom]: as tall as the
+     * box allows, condensing horizontally down to [minScaleX] before shrinking the font.
+     */
     private fun drawFitted(
         canvas: Canvas,
         paint: Paint,
         text: String,
-        centerX: Float,
+        left: Float,
         top: Float,
+        right: Float,
         bottom: Float,
-        maxWidth: Float,
-        maxTextSize: Float,
+        minScaleX: Float,
     ) {
-        paint.textSize = maxTextSize
-        val measured = paint.measureText(text)
-        if (measured > maxWidth) paint.textSize = maxTextSize * maxWidth / measured
-        val fm = paint.fontMetrics
-        // Centre the glyphs' visual box (ascent..descent) inside the band.
-        val baseline = (top + bottom) / 2f - (fm.ascent + fm.descent) / 2f
-        canvas.drawText(text, centerX, baseline, paint)
+        val boxW = right - left
+        val boxH = bottom - top
+        val bounds = Rect()
+
+        paint.textScaleX = 1f
+        paint.textSize = 100f
+        paint.getTextBounds(text, 0, text.length, bounds)
+        if (bounds.width() <= 0 || bounds.height() <= 0) return
+
+        var textSize = 100f * boxH / bounds.height()
+        val naturalWidth = bounds.width() * textSize / 100f
+        var scaleX = 1f
+        if (naturalWidth > boxW) {
+            scaleX = (boxW / naturalWidth).coerceAtLeast(minScaleX)
+            if (naturalWidth * scaleX > boxW) textSize *= boxW / (naturalWidth * scaleX)
+        }
+        paint.textSize = textSize
+        paint.textScaleX = scaleX
+        paint.getTextBounds(text, 0, text.length, bounds)
+        val x = left + (boxW - bounds.width()) / 2f - bounds.left
+        val y = top + (boxH - bounds.height()) / 2f - bounds.top
+        canvas.drawText(text, x, y, paint)
+        paint.textScaleX = 1f
     }
 }
