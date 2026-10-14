@@ -44,6 +44,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import com.ibadalrahman.app.Refresher
 import com.ibadalrahman.app.core.Prayer
 import com.ibadalrahman.app.data.Settings
+import kotlinx.coroutines.delay
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -73,6 +79,19 @@ val LocalSettingsVersion = compositionLocalOf { 0L }
 fun settings(): Settings {
     LocalSettingsVersion.current
     return Settings.get(LocalContext.current)
+}
+
+/** Current time, refreshed at every [periodMillis] boundary so previews and countdowns stay live. */
+@Composable
+fun rememberNow(periodMillis: Long = 60_000L): Long {
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(periodMillis) {
+        while (true) {
+            delay(periodMillis - System.currentTimeMillis() % periodMillis + 50L)
+            now = System.currentTimeMillis()
+        }
+    }
+    return now
 }
 
 /** Returns a callback that pushes the latest settings to alarms, widgets and the status bar. */

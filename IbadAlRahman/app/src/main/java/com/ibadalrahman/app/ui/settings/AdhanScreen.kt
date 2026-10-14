@@ -35,6 +35,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.ibadalrahman.app.R
 import com.ibadalrahman.app.alarm.AdhanService
+import com.ibadalrahman.app.alarm.SilentMode
 import com.ibadalrahman.app.core.Prayer
 import com.ibadalrahman.app.data.AlertMode
 import com.ibadalrahman.app.ui.Labels
@@ -206,7 +207,11 @@ fun AdhanSettingsScreen(onBack: () -> Unit) {
                 "تحويل الهاتف إلى الاهتزاز تلقائيًا",
                 "ثم يعود الرنين كما كان بعد انتهاء المدة",
                 s.silentEnabled,
-            ) { s.silentEnabled = it; apply() }
+            ) {
+                s.silentEnabled = it
+                if (!it) SilentMode.restore(context, force = true)
+                apply()
+            }
             if (s.silentEnabled) {
                 SettingItem("يبدأ بعد الأذان بـ", fmt.minutes(s.silentDelayMinutes), trailing = {
                     Stepper(fmt.number(s.silentDelayMinutes), onMinus = {

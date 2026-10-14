@@ -16,6 +16,17 @@ enum class WidgetTheme(
     ROYAL(0xFF4B3A7A.toInt(), 0xFFF5E6C8.toInt(), 0xFFD3CAF0.toInt(), 0xFFF1CF63.toInt(), false),
     GLASS(0xFF000000.toInt(), 0xFFFFFFFF.toInt(), 0xFFE6E6E6.toInt(), 0xFF6ED1C5.toInt(), false),
     CREAM(0xFFF5E6C8.toInt(), 0xFF0E4D47.toInt(), 0xFF6B5B3E.toInt(), 0xFF9C7A1C.toInt(), true),
+    ;
+
+    companion object {
+        /** Parses a stored name, mapping themes from earlier versions to their closest successor. */
+        fun parse(name: String?): WidgetTheme? = when (name) {
+            null -> null
+            "EMERALD", "GOLD" -> ANDALUS
+            "LIGHT" -> CREAM
+            else -> entries.firstOrNull { it.name == name }
+        }
+    }
 }
 
 /** Per-widget appearance, keyed by appWidgetId; falls back to the app-wide defaults. */
@@ -24,7 +35,7 @@ class WidgetPrefs(context: Context) {
     private val settings = Settings.get(context)
 
     fun theme(id: Int): WidgetTheme =
-        Settings.enumValue(prefs.getString("theme_$id", null), settings.widgetThemeDefault)
+        WidgetTheme.parse(prefs.getString("theme_$id", null)) ?: settings.widgetThemeDefault
 
     /** Background opacity 0..100. */
     fun opacity(id: Int): Int = prefs.getInt("opacity_$id", settings.widgetOpacityDefault)

@@ -23,6 +23,9 @@ sealed interface LocationResult {
     data object NoPermission : LocationResult
     data object Disabled : LocationResult
     data object Unavailable : LocationResult
+
+    /** A background refresh found that the user switched to a manual city meanwhile. */
+    data object Skipped : LocationResult
 }
 
 /** One-shot location lookup using the platform LocationManager (no Play Services needed). */
@@ -37,9 +40,13 @@ object LocationHelper {
             ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
             PackageManager.PERMISSION_GRANTED
 
-    /** Locates the device, stores the result in [Settings] and reports back on the main thread. */
+    /**
+     * Locates the device, stores the result in [Settings] and reports back on the main thread.
+     * With [onlyIfAuto] (background refreshes) nothing is written if the user has meanwhile
+     * picked a city by hand.
+     */
     @SuppressLint("MissingPermission")
-    fun updateLocation(context: Context, onResult: (LocationResult) -> Unit) {
+    fun updateLocation(context: Context, onlyIfAuto: Boolean = false, onResult: (LocationResult) -> Unit) {
         val app = context.applicationContext
         if (!hasPermission(app)) return onResult(LocationResult.NoPermission)
         val lm = app.getSystemService(LocationManager::class.java)
@@ -55,43 +62,48 @@ object LocationHelper {
         val lastKnown = providers.mapNotNull { runCatching { lm.getLastKnownLocation(it) }.getOrNull() }
             .maxByOrNull { it.time }
         val fresh = lastKnown?.takeIf { System.currentTimeMillis() - it.time < 15 * 60_000L }
-        if (fresh != null) return deliver(app, fresh, onResult)
+        if (fresh != null) return deliver(app, fresh, onlyIfAuto, onResult)
         if (providers.isEmpty()) {
-            return if (lastKnown != null) deliver(app, lastKnown, onResult) else onResult(LocationResult.Unavailable)
+            return if (lastKnown != null) deliver(app, lastKnown, onlyIfAuto, onResult) else onResult(LocationResult.Unavailable)
         }
 
         fun attempt(index: Int) {
             if (index >= providers.size) {
                 main.post {
-                    if (lastKnown != null) deliver(app, lastKnown, onResult) else onResult(LocationResult.Unavailable)
+                    if (lastKnown != null) deliver(app, lastKnown, onlyIfAuto, onResult) else onResult(LocationResult.Unavailable)
                 }
                 return
             }
             LocationManagerCompat.getCurrentLocation(lm, providers[index], CancellationSignal(), executor) { location: Location? ->
-                if (location != null) main.post { deliver(app, location, onResult) } else attempt(index + 1)
+                if (location != null) main.post { deliver(app, location, onlyIfAuto, onResult) } else attempt(index + 1)
             }
         }
         attempt(0)
     }
 
-    private fun deliver(context: Context, location: Location, onResult: (LocationResult) -> Unit) {
+    private fun deliver(context: Context, location: Location, onlyIfAuto: Boolean, onResult: (LocationResult) -> Unit) {
         val lat = location.latitude
         val lng = location.longitude
         reverseGeocode(context, lat, lng) { address ->
+            val settings = Settings.get(context)
+            if (onlyIfAuto && settings.locationMode != LocationMode.AUTO) return@reverseGeocode onResult(LocationResult.Skipped)
             val nearest = Cities.nearest(lat, lng)
             val name = address?.let { it.locality ?: it.subAdminArea ?: it.adminArea }
                 ?: nearest?.name
                 ?: "%.3f, %.3f".format(Locale.US, lat, lng)
-            val country = address?.countryCode ?: nearest?.countryCode
-            val settings = Settings.get(context)
+            // Country from the geocoder, else from the closest known city within a few hundred km.
+            val country = address?.countryCode ?: Cities.nearest(lat, lng, maxKm = 400.0)?.countryCode
             settings.latitude = lat
             settings.longitude = lng
             settings.locationName = name
-            settings.countryCode = country.orEmpty()
             settings.cityId = ""
             settings.zoneId = ""
-            settings.locationUpdatedAt = System.currentTimeMillis()
-            if (settings.methodAuto) settings.method = CalculationMethod.forCountry(country)
+            // The fix's own time, so a stale last-known position does not block the next refresh.
+            settings.locationUpdatedAt = minOf(System.currentTimeMillis(), location.time)
+            if (country != null) {
+                settings.countryCode = country
+                if (settings.methodAuto) settings.method = CalculationMethod.forCountry(country)
+            }
             onResult(LocationResult.Success(name, country))
         }
     }

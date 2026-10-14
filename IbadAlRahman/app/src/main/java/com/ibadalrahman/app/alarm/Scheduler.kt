@@ -13,6 +13,7 @@ import com.ibadalrahman.app.data.Settings
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalTime
+import java.time.ZoneId
 
 enum class EventType { ADHAN, REMINDER, IQAMA, SILENT_START, SILENT_END, KAHF, REFRESH }
 
@@ -26,13 +27,19 @@ data class PrayerEvent(val time: Long, val type: EventType, val prayer: Prayer? 
 object Scheduler {
     private const val TAG = "Scheduler"
     private const val GRACE_MILLIS = 10 * 60_000L
+    /** A late adhan becomes a plain notification for this long instead of being dropped. */
+    private const val LATE_NOTICE_MILLIS = 70 * 60_000L
+    private const val DAY_MILLIS = 24 * 3_600_000L
 
     fun events(context: Context, from: Long, to: Long): List<PrayerEvent> {
         val s = Settings.get(context)
         val zone = s.zone()
         val startDate = Instant.ofEpochMilli(from).atZone(zone).toLocalDate().minusDays(1)
-        val endDate = Instant.ofEpochMilli(to).atZone(zone).toLocalDate()
+        // One day past the window: a reminder before an early Fajr falls on the previous evening.
+        val endDate = Instant.ofEpochMilli(to).atZone(zone).toLocalDate().plusDays(1)
         val out = ArrayList<PrayerEvent>()
+        // Whatever the settings say now, a ringer we silenced must be given back.
+        if (s.savedRingerMode >= 0 && s.silentUntil > 0) out += PrayerEvent(s.silentUntil, EventType.SILENT_END)
         var date = startDate
         while (!date.isAfter(endDate)) {
             val times = PrayerRepository.times(context, date)
@@ -63,23 +70,81 @@ object Scheduler {
     }
 
     fun nextEvent(context: Context, now: Long = System.currentTimeMillis()): PrayerEvent? =
-        events(context, now + 1, now + 3 * 24 * 3_600_000L).firstOrNull()
+        events(context, now + 1, now + 3 * DAY_MILLIS).firstOrNull()
 
+    /**
+     * Arms the earliest event not yet handled, even if its time has passed: an alarm that is due but
+     * not delivered yet (inexact alarms, Doze) must not be replaced by a later one when the app or a
+     * widget re-arms the chain.
+     */
     fun scheduleNext(context: Context) {
-        val next = nextEvent(context) ?: return
-        arm(context, next.time)
+        val s = Settings.get(context)
+        val now = System.currentTimeMillis()
+        // First run: nothing from before the install should fire.
+        if (s.lastHandledEventAt <= 0L) s.lastHandledEventAt = now
+        val zone = s.zone()
+        val handled = handledKeys(context, now)
+        val next = events(context, windowStart(s.lastHandledEventAt, now), now + 3 * DAY_MILLIS)
+            .firstOrNull { isPending(it, zone, handled, now) } ?: return
+        arm(context, maxOf(next.time, now))
     }
 
-    /** Events that should be handled now; [lastHandled] prevents handling the same event twice. */
+    /**
+     * Events that should be handled now. [lastHandled] bounds the scan, and the per-occurrence keys
+     * stop a prayer that moved a little later (manual offset, new location) from sounding twice.
+     */
     fun dueEvents(context: Context, now: Long, lastHandled: Long): List<PrayerEvent> {
+        val zone = Settings.get(context).zone()
+        val handled = handledKeys(context, now)
+        return events(context, windowStart(lastHandled, now), now + 1_000).filter { isPending(it, zone, handled, now) }
+    }
+
+    /** True when the event is handled after its time, so only a silent notice makes sense. */
+    fun isLate(event: PrayerEvent, now: Long): Boolean = now - event.time > GRACE_MILLIS
+
+    private fun windowStart(lastHandled: Long, now: Long): Long {
         // A marker in the future means the clock was set back; ignore it rather than skip events.
         val last = if (lastHandled > now + 60_000L) 0L else lastHandled
-        val from = maxOf(last + 1, now - 6 * 3_600_000L)
-        return events(context, from, now + 1_000).filter { event ->
-            // Restoring the ringer is always done, however late; sounds are skipped if very late.
-            event.type == EventType.SILENT_END || event.type == EventType.REFRESH || now - event.time <= GRACE_MILLIS
+        return maxOf(last + 1, now - 6 * 3_600_000L)
+    }
+
+    private fun isPending(event: PrayerEvent, zone: ZoneId, handled: Map<String, Long>, now: Long): Boolean {
+        val key = eventKey(event, zone)
+        if (key != null && key in handled) return false
+        val late = now - event.time
+        return when (event.type) {
+            // Restoring the ringer and refreshing are always done, however late.
+            EventType.SILENT_END, EventType.REFRESH -> true
+            EventType.ADHAN -> late <= LATE_NOTICE_MILLIS
+            // A late reminder is still useful while the prayer has not come yet.
+            EventType.REMINDER -> late <= GRACE_MILLIS || now < event.prayerTime
+            EventType.KAHF -> late <= 3 * 3_600_000L
+            else -> late <= GRACE_MILLIS
         }
     }
+
+    /** Identity of one occurrence (type, prayer, local date); null for idempotent events. */
+    fun eventKey(event: PrayerEvent, zone: ZoneId): String? = when (event.type) {
+        EventType.REFRESH, EventType.SILENT_END -> null
+        else -> "${event.type}:${event.prayer?.name.orEmpty()}:${Instant.ofEpochMilli(event.prayerTime).atZone(zone).toLocalDate()}"
+    }
+
+    fun markHandled(context: Context, events: List<PrayerEvent>, now: Long) {
+        val s = Settings.get(context)
+        val zone = s.zone()
+        val map = handledKeys(context, now).toMutableMap()
+        events.forEach { e -> eventKey(e, zone)?.let { map[it] = e.time } }
+        s.handledEvents = map.entries.joinToString(";") { "${it.key}=${it.value}" }
+    }
+
+    /** Handled keys from the last three days. */
+    private fun handledKeys(context: Context, now: Long): Map<String, Long> =
+        Settings.get(context).handledEvents.split(';').mapNotNull { entry ->
+            val i = entry.lastIndexOf('=')
+            if (i <= 0) return@mapNotNull null
+            val time = entry.substring(i + 1).toLongOrNull() ?: return@mapNotNull null
+            if (now - time > 3 * 24 * 3_600_000L) null else entry.substring(0, i) to time
+        }.toMap()
 
     fun canScheduleExact(context: Context): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true

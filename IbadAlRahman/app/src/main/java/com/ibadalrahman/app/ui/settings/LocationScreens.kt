@@ -147,6 +147,7 @@ fun LocationScreen(onBack: () -> Unit, navigate: (Route) -> Unit) {
                 LocationResult.NoPermission -> "لم يتم منح إذن الموقع."
                 LocationResult.Disabled -> "خدمة الموقع متوقفة في الهاتف، يرجى تفعيلها."
                 LocationResult.Unavailable -> "تعذّر تحديد الموقع الآن، حاول مجددًا في مكان مفتوح."
+                LocationResult.Skipped -> null
             }
             if (result is LocationResult.Success) {
                 s.locationMode = LocationMode.AUTO

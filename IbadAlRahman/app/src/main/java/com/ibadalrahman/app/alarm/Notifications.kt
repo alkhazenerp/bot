@@ -25,11 +25,12 @@ import com.ibadalrahman.app.util.Format
 object Notifications {
     const val CHANNEL_ADHAN = "adhan"
     const val CHANNEL_PRAYER = "prayer_alert"
-    const val CHANNEL_REMINDER = "reminder"
-    const val CHANNEL_IQAMA = "iqama"
+    // v2: v1 stored the chime as a numeric resource id, which can change between builds.
+    const val CHANNEL_REMINDER = "reminder_v2"
+    const val CHANNEL_IQAMA = "iqama_v2"
+    private val LEGACY_CHANNELS = listOf("reminder", "iqama", "status_bar")
     /** v2: v1 was created with LOW importance, which some devices hide from the status bar. */
     const val CHANNEL_STATUS = "status_bar_v2"
-    private const val LEGACY_CHANNEL_STATUS = "status_bar"
     const val CHANNEL_GENERAL = "general"
 
     const val ID_STATUS = 1001
@@ -43,8 +44,9 @@ object Notifications {
     const val DUA_AFTER_ADHAN =
         "اللهم ربَّ هذه الدعوة التامة، والصلاة القائمة، آتِ محمدًا الوسيلة والفضيلة، وابعثه مقامًا محمودًا الذي وعدته."
 
+    /** Name-based resource URI: stays valid across app updates, unlike a numeric id. */
     fun chimeUri(context: Context): Uri =
-        Uri.parse("${ContentResolver.SCHEME_ANDROID_RESOURCE}://${context.packageName}/${R.raw.chime}")
+        Uri.parse("${ContentResolver.SCHEME_ANDROID_RESOURCE}://${context.packageName}/raw/chime")
 
     fun createChannels(context: Context) {
         val nm = context.getSystemService(NotificationManager::class.java) ?: return
@@ -85,8 +87,8 @@ object Notifications {
             description = "تذكير سورة الكهف ووضع الصامت أثناء الصلاة"
         }
         nm.createNotificationChannels(listOf(adhan, prayer, reminder, iqama, status, general))
-        // Importance cannot be raised on an existing channel, so the old one is replaced.
-        runCatching { nm.deleteNotificationChannel(LEGACY_CHANNEL_STATUS) }
+        // Importance and sound cannot be changed on an existing channel, so old ones are replaced.
+        LEGACY_CHANNELS.forEach { id -> runCatching { nm.deleteNotificationChannel(id) } }
     }
 
     fun canPost(context: Context): Boolean =

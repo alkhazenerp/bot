@@ -21,8 +21,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -67,7 +70,15 @@ fun AppRoot() {
 @Composable
 private fun MainScaffold() {
     var tab by rememberSaveable { mutableStateOf(Tab.HOME) }
-    val stack = remember { mutableStateListOf<Route>() }
+    // Survives rotation, theme changes and process death.
+    val stack = rememberSaveable(
+        saver = listSaver<SnapshotStateList<Route>, String>(
+            save = { list -> list.map { it.name } },
+            restore = { names -> mutableStateListOf(*names.map(Route::valueOf).toTypedArray()) },
+        ),
+    ) { mutableStateListOf<Route>() }
+    // Keeps each tab's saved state (selected day, scroll position) while a sub-page is open.
+    val tabStates = rememberSaveableStateHolder()
     val navigate: (Route) -> Unit = { stack.add(it) }
     val back: () -> Unit = { if (stack.isNotEmpty()) stack.removeAt(stack.lastIndex) }
 
@@ -126,12 +137,14 @@ private fun MainScaffold() {
         },
     ) { padding ->
         val modifier = Modifier.padding(padding)
-        when (tab) {
-            Tab.HOME -> HomeScreen(modifier, navigate)
-            Tab.QIBLA -> QiblaScreen(modifier)
-            Tab.MONTH -> MonthScreen(modifier)
-            Tab.TASBIH -> TasbihScreen(modifier)
-            Tab.SETTINGS -> SettingsHub(modifier, navigate)
+        tabStates.SaveableStateProvider(tab.name) {
+            when (tab) {
+                Tab.HOME -> HomeScreen(modifier, navigate)
+                Tab.QIBLA -> QiblaScreen(modifier)
+                Tab.MONTH -> MonthScreen(modifier)
+                Tab.TASBIH -> TasbihScreen(modifier)
+                Tab.SETTINGS -> SettingsHub(modifier, navigate)
+            }
         }
     }
 }

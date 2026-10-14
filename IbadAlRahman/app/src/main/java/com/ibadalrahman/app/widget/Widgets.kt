@@ -173,6 +173,10 @@ object WidgetRenderer {
                 views.setTextViewText(R.id.w_next, "$nextName ${fmt.time(next.time, snapshot.zone)}")
                 views.setTextViewText(R.id.w_location, snapshot.locationName)
                 views.setTextColor(R.id.w_clock, theme.text)
+                // Follow the app's 12/24-hour choice rather than the system one.
+                val clockFormat = if (s.use24h) "HH:mm" else "h:mm"
+                views.setCharSequence(R.id.w_clock, "setFormat12Hour", clockFormat)
+                views.setCharSequence(R.id.w_clock, "setFormat24Hour", clockFormat)
                 views.setTextColor(R.id.w_date, theme.secondary)
                 views.setTextColor(R.id.w_next, theme.accent)
                 views.setTextColor(R.id.w_sep, theme.secondary)

@@ -41,6 +41,7 @@ class AdhanService : Service() {
     private var focusRequest: AudioFocusRequest? = null
     private var screenReceiver: BroadcastReceiver? = null
     private var startedAt = 0L
+    private var playId = 0
     private var currentPrayer: Prayer = Prayer.DHUHR
     private var currentTime = 0L
     private var preview = false
@@ -70,9 +71,26 @@ class AdhanService : Service() {
     }
 
     private fun startPlayback(overrideUri: String?) {
-        releasePlayer()
         val s = Settings.get(this)
         val uri = overrideUri ?: if (currentPrayer == Prayer.FAJR && s.fajrAdhanUri.isNotBlank()) s.fajrAdhanUri else s.adhanUri
+        play(uri)
+        if (s.adhanVibrate && !preview) vibrate()
+        if (s.adhanStopOnScreenOff) registerScreenReceiver()
+        handler.removeCallbacks(timeout)
+        handler.postDelayed(timeout, MAX_DURATION_MS)
+    }
+
+    /**
+     * Starts [uri] (blank = bundled sound). Every callback is tied to this attempt's id so a
+     * previous player or focus request can never stop a newer one; an unplayable custom file
+     * falls back to the bundled sound instead of staying silent.
+     */
+    private fun play(uri: String) {
+        releasePlayer()
+        abandonFocus()
+        startedAt = 0L
+        val id = ++playId
+        val s = Settings.get(this)
         val attributes = AudioAttributes.Builder()
             .setUsage(if (s.adhanUseAlarmStream) AudioAttributes.USAGE_ALARM else AudioAttributes.USAGE_NOTIFICATION)
             .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
@@ -81,30 +99,30 @@ class AdhanService : Service() {
         val mp = MediaPlayer()
         player = mp
         mp.setAudioAttributes(attributes)
-        if (!setSource(mp, uri)) {
+        var source = uri
+        if (!setSource(mp, source)) {
             mp.reset()
             mp.setAudioAttributes(attributes)
-            if (!setSource(mp, "")) return finish(keepNotification = false)
+            source = ""
+            if (!setSource(mp, source)) return finish(keepNotification = false)
         }
         val volume = (s.adhanVolume.coerceIn(0, 100) / 100f)
         mp.setVolume(volume, volume)
-        mp.setOnCompletionListener { finish(keepNotification = !preview) }
+        mp.setOnCompletionListener { if (id == playId) finish(keepNotification = !preview) }
         mp.setOnErrorListener { _, what, extra ->
-            Log.w(TAG, "MediaPlayer error $what/$extra")
-            finish(keepNotification = !preview)
+            Log.w(TAG, "MediaPlayer error $what/$extra for '$source'")
+            if (id == playId) {
+                if (source.isNotBlank()) play("") else finish(keepNotification = !preview)
+            }
             true
         }
         mp.setOnPreparedListener {
-            requestFocus(attributes)
+            if (id != playId) return@setOnPreparedListener
+            requestFocus(attributes, id)
             it.start()
             startedAt = SystemClock.elapsedRealtime()
         }
         mp.prepareAsync()
-
-        if (s.adhanVibrate && !preview) vibrate()
-        if (s.adhanStopOnScreenOff) registerScreenReceiver()
-        handler.removeCallbacks(timeout)
-        handler.postDelayed(timeout, MAX_DURATION_MS)
     }
 
     private fun setSource(mp: MediaPlayer, uri: String): Boolean = try {
@@ -121,18 +139,22 @@ class AdhanService : Service() {
         false
     }
 
-    private fun requestFocus(attributes: AudioAttributes) {
+    private fun requestFocus(attributes: AudioAttributes, id: Int) {
         val am = getSystemService(AudioManager::class.java) ?: return
         val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
             .setAudioAttributes(attributes)
             .setOnAudioFocusChangeListener { change ->
-                if (change == AudioManager.AUDIOFOCUS_LOSS || change == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) {
-                    finish(keepNotification = !preview)
-                }
+                val lost = change == AudioManager.AUDIOFOCUS_LOSS || change == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT
+                if (lost && id == playId) finish(keepNotification = !preview)
             }
             .build()
         focusRequest = request
         am.requestAudioFocus(request)
+    }
+
+    private fun abandonFocus() {
+        focusRequest?.let { getSystemService(AudioManager::class.java)?.abandonAudioFocusRequest(it) }
+        focusRequest = null
     }
 
     /** Pressing the power button (screen turning on or off) silences the adhan. */
@@ -207,8 +229,8 @@ class AdhanService : Service() {
         releasePlayer()
         screenReceiver?.let { runCatching { unregisterReceiver(it) } }
         screenReceiver = null
-        focusRequest?.let { getSystemService(AudioManager::class.java)?.abandonAudioFocusRequest(it) }
-        focusRequest = null
+        abandonFocus()
+        playId++ // any callback still in flight belongs to a finished attempt
         if (keepNotification && Notifications.canPost(this)) {
             ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_DETACH)
             NotificationManagerCompat.from(this).notify(Notifications.ID_ADHAN, buildNotification(playing = false))
@@ -229,6 +251,7 @@ class AdhanService : Service() {
     override fun onDestroy() {
         handler.removeCallbacks(timeout)
         releasePlayer()
+        abandonFocus()
         screenReceiver?.let { runCatching { unregisterReceiver(it) } }
         screenReceiver = null
         super.onDestroy()

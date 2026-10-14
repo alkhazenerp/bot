@@ -27,7 +27,7 @@ class PrayerTileService : TileService() {
         val next = snapshot.status.next
         val name = Format.prayerName(next.prayer, snapshot.nextIsFriday)
         tile.label = "$name ${fmt.time(next.time, snapshot.zone)}"
-        val remaining = "بعد ${fmt.digits(StatusIconRenderer.hm(snapshot.status.remainingMillis(snapshot.now)))}"
+        val remaining = "بعد ${fmt.remainingWords(snapshot.status.remainingMillis(snapshot.now))}"
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             tile.subtitle = remaining
         } else {

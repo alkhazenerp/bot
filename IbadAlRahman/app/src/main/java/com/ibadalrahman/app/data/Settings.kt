@@ -147,7 +147,12 @@ class Settings private constructor(private val prefs: SharedPreferences) {
     var statusTextSize by enum("status_text_size", StatusTextSize.LARGE)
     var statusIncludeSunrise by bool("status_include_sunrise", true)
 
-    var widgetThemeDefault by enum("widget_theme_default", WidgetTheme.ANDALUS)
+    var widgetThemeDefault: WidgetTheme
+        get() {
+            track()
+            return WidgetTheme.parse(prefs.getString("widget_theme_default", null)) ?: WidgetTheme.ANDALUS
+        }
+        set(value) = prefs.edit().putString("widget_theme_default", value.name).apply()
     var widgetOpacityDefault by int("widget_opacity_default", 85)
 
     // ---------------------------------------------------------------- tasbih
@@ -158,7 +163,11 @@ class Settings private constructor(private val prefs: SharedPreferences) {
 
     // ---------------------------------------------------------------- internal state (not observed)
     var lastHandledEventAt by long("last_handled_event_at", 0L)
+    /** Recently handled events as "key=time;key=time" so a shifted prayer time does not replay. */
+    var handledEvents by string("handled_events", "")
     var savedRingerMode by int("saved_ringer_mode", -1)
+    /** Ringer mode the device actually ended up in when we silenced it (no vibrator = silent). */
+    var appliedRingerMode by int("applied_ringer_mode", -1)
     var silentUntil by long("silent_until", 0L)
 
     // ---------------------------------------------------------------- derived values
@@ -256,7 +265,7 @@ class Settings private constructor(private val prefs: SharedPreferences) {
     companion object {
         // Written often and never shown reactively: changing them must not recompose the UI.
         private val volatileKeys = setOf(
-            "last_handled_event_at", "saved_ringer_mode", "silent_until",
+            "last_handled_event_at", "handled_events", "saved_ringer_mode", "applied_ringer_mode", "silent_until",
             "tasbih_count", "tasbih_total", "tasbih_phrase", "tasbih_target",
         )
 

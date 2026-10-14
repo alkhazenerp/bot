@@ -32,6 +32,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -70,23 +72,33 @@ import com.ibadalrahman.app.util.Permissions
 fun OnboardingScreen() {
     val context = LocalContext.current
     val s = remember { Settings.get(context) }
-    var pickingCity by remember { mutableStateOf(false) }
+    var pickingCity by rememberSaveable { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
-    var message by remember { mutableStateOf<String?>(null) }
+    var message by rememberSaveable { mutableStateOf<String?>(null) }
+    // Set from async callbacks; the permission request itself runs only while this screen is shown.
+    var askNotifications by rememberSaveable { mutableStateOf(false) }
 
     fun finish() {
+        // Prayers that passed while setting up should not sound right after.
+        s.lastHandledEventAt = System.currentTimeMillis()
         s.onboardingDone = true
         Refresher.refreshAll(context, allowStartService = true)
     }
 
     val notificationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { finish() }
 
-    fun askNotificationsThenFinish() {
+    LaunchedEffect(askNotifications) {
+        if (!askNotifications) return@LaunchedEffect
+        askNotifications = false
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !Permissions.notificationsGranted(context)) {
             notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         } else {
             finish()
         }
+    }
+
+    fun askNotificationsThenFinish() {
+        askNotifications = true
     }
 
     fun locate() {

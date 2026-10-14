@@ -86,6 +86,7 @@ import com.ibadalrahman.app.ui.components.SettingItem
 import com.ibadalrahman.app.ui.components.SubPage
 import com.ibadalrahman.app.ui.components.SwitchItem
 import com.ibadalrahman.app.ui.components.rememberApplySettings
+import com.ibadalrahman.app.ui.components.rememberNow
 import com.ibadalrahman.app.ui.components.settings
 import com.ibadalrahman.app.ui.theme.Gold
 import com.ibadalrahman.app.ui.theme.GoldGradient
@@ -104,7 +105,8 @@ fun StatusBarScreen(onBack: () -> Unit) {
     val version = LocalSettingsVersion.current
     val apply = rememberApplySettings()
     val fmt = Format(s)
-    val snapshot = remember(version) { PrayerRepository.snapshot(context, includeSunrise = s.statusIncludeSunrise) }
+    val now = rememberNow()
+    val snapshot = remember(version, now / 60_000L) { PrayerRepository.snapshot(context, now, includeSunrise = s.statusIncludeSunrise) }
     val notificationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { apply() }
 
     SubPage("شريط الحالة", onBack) {
@@ -233,7 +235,8 @@ fun WidgetSettingsScreen(onBack: () -> Unit) {
     val s = settings()
     val version = LocalSettingsVersion.current
     val fmt = Format(s)
-    val snapshot = remember(version) { PrayerRepository.snapshot(context) }
+    val now = rememberNow()
+    val snapshot = remember(version, now / 60_000L) { PrayerRepository.snapshot(context, now) }
     var opacity by remember { mutableFloatStateOf(s.widgetOpacityDefault.toFloat()) }
 
     SubPage("الودجت", onBack) {

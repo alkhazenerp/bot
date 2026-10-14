@@ -25,7 +25,7 @@ class MainActivity : ComponentActivity() {
         if (s.locationMode == LocationMode.AUTO && LocationHelper.hasPermission(this) &&
             System.currentTimeMillis() - s.locationUpdatedAt > 3 * 3_600_000L
         ) {
-            LocationHelper.updateLocation(this) { Refresher.refreshAll(this, allowStartService = true) }
+            LocationHelper.updateLocation(this, onlyIfAuto = true) { Refresher.refreshAll(this, allowStartService = true) }
         }
         Refresher.refreshAll(this, allowStartService = true)
     }

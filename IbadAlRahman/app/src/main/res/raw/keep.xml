@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The chime is referenced by name (android.resource://…/raw/chime) for notification channels. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@raw/chime,@raw/adhan_default" />

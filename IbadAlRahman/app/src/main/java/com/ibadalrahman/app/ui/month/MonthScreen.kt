@@ -39,6 +39,7 @@ import com.ibadalrahman.app.core.Hijri
 import com.ibadalrahman.app.core.Prayer
 import com.ibadalrahman.app.data.PrayerRepository
 import com.ibadalrahman.app.ui.components.LocalSettingsVersion
+import com.ibadalrahman.app.ui.components.rememberNow
 import com.ibadalrahman.app.ui.components.settings
 import com.ibadalrahman.app.util.Format
 import java.time.DayOfWeek
@@ -51,7 +52,9 @@ fun MonthScreen(modifier: Modifier) {
     val s = settings()
     val version = LocalSettingsVersion.current
     val fmt = Format(s)
-    val today = remember { LocalDate.now(s.zone()) }
+    // Re-read on every minute tick so the highlight moves after midnight.
+    val now = rememberNow()
+    val today = remember(now / 60_000L, version) { java.time.Instant.ofEpochMilli(now).atZone(s.zone()).toLocalDate() }
     var monthOffset by rememberSaveable { mutableIntStateOf(0) }
     val month = YearMonth.from(today).plusMonths(monthOffset.toLong())
     val days = remember(month, version) {

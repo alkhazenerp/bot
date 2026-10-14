@@ -40,9 +40,13 @@ object StatusIconRenderer {
         }
     }
 
-    /** "h:mm", rounded up to the next minute so it reaches 0:00 exactly at the adhan. */
+    /**
+     * "h:mm", or just the minutes ("45") in the last hour so the digits can fill the icon.
+     * Rounded up to the next minute so it reaches 0 exactly at the adhan.
+     */
     fun hm(millis: Long): String {
         val minutes = (millis.coerceAtLeast(0) + 59_999) / 60_000
+        if (minutes < 60) return minutes.toString()
         return "${minutes / 60}:${(minutes % 60).toString().padStart(2, '0')}"
     }
 
