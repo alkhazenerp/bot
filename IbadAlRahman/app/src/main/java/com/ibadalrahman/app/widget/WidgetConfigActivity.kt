@@ -30,6 +30,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -69,6 +70,8 @@ class WidgetConfigActivity : ComponentActivity() {
             IbadTheme(settings.themeMode) {
                 var theme by remember { mutableStateOf(prefs.theme(widgetId)) }
                 var opacity by remember { mutableFloatStateOf(prefs.opacity(widgetId).toFloat()) }
+                // The preview follows the slider when the drag ends: rendering it is not free.
+                var previewOpacity by remember { mutableIntStateOf(opacity.toInt()) }
                 val snapshot = remember { PrayerRepository.snapshot(this) }
                 val fmt = remember { Format(settings) }
 
@@ -83,7 +86,7 @@ class WidgetConfigActivity : ComponentActivity() {
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     Text("تخصيص ودجت «${kind.title}»", style = MaterialTheme.typography.titleLarge)
-                    WidgetPreview(kind, theme, opacity.toInt(), snapshot, fmt)
+                    WidgetPreview(kind, theme, previewOpacity, snapshot, fmt)
                     Text("الألوان", style = MaterialTheme.typography.titleMedium)
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         WidgetTheme.entries.forEach { t ->
@@ -103,7 +106,12 @@ class WidgetConfigActivity : ComponentActivity() {
                         }
                     }
                     Text("عتامة الخلفية: ${fmt.number(opacity.toInt())}٪", style = MaterialTheme.typography.titleMedium)
-                    Slider(value = opacity, onValueChange = { opacity = it }, valueRange = 0f..100f)
+                    Slider(
+                        value = opacity,
+                        onValueChange = { opacity = it },
+                        onValueChangeFinished = { previewOpacity = opacity.toInt() },
+                        valueRange = 0f..100f,
+                    )
                     Text(
                         "صفر = شفاف تمامًا (النص فوق الخلفية مباشرة)، ١٠٠ = خلفية كاملة.",
                         style = MaterialTheme.typography.bodySmall,

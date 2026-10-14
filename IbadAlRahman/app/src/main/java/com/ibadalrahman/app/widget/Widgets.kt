@@ -4,7 +4,6 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
-import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -13,6 +12,7 @@ import android.graphics.RectF
 import android.os.Bundle
 import android.os.SystemClock
 import android.util.SizeF
+import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
 import androidx.core.graphics.ColorUtils
@@ -142,20 +142,19 @@ object WidgetRenderer {
 
     fun render(context: Context, kind: WidgetKind, appWidgetId: Int, snapshot: PrayerSnapshot): RemoteViews {
         val prefs = WidgetPrefs(context)
-        val size = if (kind.andalusian) sizeOf(context, appWidgetId, kind) else null
-        return render(context, kind, prefs.theme(appWidgetId), prefs.opacity(appWidgetId), snapshot, size)
-    }
-
-    /**
-     * Current size of a placed widget in dp, as reported by the launcher: the narrow width and
-     * tall height in portrait, the wide width and short height in landscape.
-     */
-    fun sizeOf(context: Context, appWidgetId: Int, kind: WidgetKind): SizeF {
+        val theme = prefs.theme(appWidgetId)
+        val opacity = prefs.opacity(appWidgetId)
+        if (!kind.andalusian) return render(context, kind, theme, opacity, snapshot)
+        // The ornament is drawn for an exact size, so send one for each orientation and let the
+        // launcher pick: portrait is the narrow width x tall height, landscape the reverse.
         val options = runCatching { AppWidgetManager.getInstance(context).getAppWidgetOptions(appWidgetId) }.getOrNull()
-        val portrait = context.resources.configuration.orientation != Configuration.ORIENTATION_LANDSCAPE
-        val w = options?.getInt(if (portrait) AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH else AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH) ?: 0
-        val h = options?.getInt(if (portrait) AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT else AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT) ?: 0
-        return SizeF(if (w > 0) w.toFloat() else kind.widthDp, if (h > 0) h.toFloat() else kind.heightDp)
+        fun dim(key: String, fallback: Float) = options?.getInt(key)?.takeIf { it > 0 }?.toFloat() ?: fallback
+        val portrait = SizeF(dim(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, kind.widthDp), dim(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, kind.heightDp))
+        val landscape = SizeF(dim(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, kind.widthDp), dim(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, kind.heightDp))
+        return RemoteViews(
+            render(context, kind, theme, opacity, snapshot, landscape),
+            render(context, kind, theme, opacity, snapshot, portrait),
+        )
     }
 
     /**
@@ -249,8 +248,23 @@ object WidgetRenderer {
             }
 
             WidgetKind.MIHRAB -> {
-                val (w, h, d) = canvasSize(context, size ?: SizeF(kind.widthDp, kind.heightDp))
+                val box = size ?: SizeF(kind.widthDp, kind.heightDp)
+                val (w, h, d) = canvasSize(context, box)
                 views.setImageViewBitmap(R.id.w_art, AndalusArt.mihrab(w, h, d, theme, opacity / 100f))
+                // Texts start below the arch's shoulders; on short widgets keep only the essentials.
+                val density = context.resources.displayMetrics.density
+                val compact = box.height < 176f
+                val top = AndalusArt.mihrabArchHeight(box.width, box.height) * 0.75f
+                views.setViewPadding(
+                    R.id.w_content,
+                    (16 * density).roundToInt(),
+                    (top * density).roundToInt(),
+                    (16 * density).roundToInt(),
+                    ((if (compact) 8 else 14) * density).roundToInt(),
+                )
+                views.setViewVisibility(R.id.w_label, if (compact) View.GONE else View.VISIBLE)
+                views.setViewVisibility(R.id.w_date, if (compact) View.GONE else View.VISIBLE)
+                views.setTextViewTextSize(R.id.w_name, TypedValue.COMPLEX_UNIT_SP, if (box.height < 150f) 22f else 26f)
                 views.setTextViewText(R.id.w_name, nextName)
                 views.setTextViewText(R.id.w_time, fmt.time(next.time, snapshot.zone))
                 views.setTextViewText(R.id.w_date, fmt.hijri(snapshot.hijri))
@@ -266,6 +280,11 @@ object WidgetRenderer {
                 val side = minOf(box.width, box.height)
                 val (px, _, d) = canvasSize(context, SizeF(side, side))
                 views.setImageViewBitmap(R.id.w_art, AndalusArt.star(px, d, theme, opacity / 100f, snapshot.status.progress(snapshot.now)))
+                // The ring scales with the star, so must the texts inside it.
+                val scale = (side / kind.widthDp).coerceIn(0.7f, 1.15f)
+                views.setTextViewTextSize(R.id.w_name, TypedValue.COMPLEX_UNIT_SP, 18f * scale)
+                views.setTextViewTextSize(R.id.w_time, TypedValue.COMPLEX_UNIT_SP, 12f * scale)
+                views.setTextViewTextSize(R.id.w_chrono, TypedValue.COMPLEX_UNIT_SP, 15f * scale)
                 views.setTextViewText(R.id.w_name, nextName)
                 views.setTextViewText(R.id.w_time, fmt.time(next.time, snapshot.zone))
                 views.setTextColor(R.id.w_name, theme.text)
@@ -300,7 +319,10 @@ object WidgetRenderer {
             }
 
             WidgetKind.CARTOUCHE -> {
-                val (w, h, d) = canvasSize(context, size ?: SizeF(kind.widthDp, kind.heightDp))
+                val box = size ?: SizeF(kind.widthDp, kind.heightDp)
+                val (w, h, d) = canvasSize(context, box)
+                // Below ~300 dp the weekday/date column would squeeze out the prayer time.
+                views.setViewVisibility(R.id.w_dates, if (box.width < 300f) View.GONE else View.VISIBLE)
                 views.setImageViewBitmap(R.id.w_art, AndalusArt.cartouche(context, w, h, d, theme, opacity / 100f))
                 views.setTextViewText(R.id.w_name, nextName)
                 views.setTextViewText(R.id.w_time, fmt.time(next.time, snapshot.zone))
@@ -325,8 +347,8 @@ object WidgetRenderer {
         return Triple((dp.width * d).roundToInt().coerceAtLeast(1), (dp.height * d).roundToInt().coerceAtLeast(1), d)
     }
 
-    /** About 1.3 MB per ornament bitmap. */
-    private const val MAX_ART_PIXELS = 320_000f
+    /** About 0.8 MB per ornament bitmap; each widget update carries two (both orientations). */
+    private const val MAX_ART_PIXELS = 200_000f
 
     /** Index of the next prayer in today's row, or -1 when it is not today's (after Isha). */
     private fun highlightIndex(snapshot: PrayerSnapshot): Int {

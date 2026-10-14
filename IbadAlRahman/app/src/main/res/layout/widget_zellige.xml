@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
+  Header texts use dp so the fixed header height holds at any font scale.
   Zellige tiles with today's times. The tiles are a bitmap (AndalusArt.zellige) drawn for the
   grid below the header, so the 10dp padding, 22dp header and 6dp grout must match
   ZELLIGE_* in Widgets.kt.
@@ -50,7 +51,7 @@
                 android:maxLines="1"
                 android:text="دمشق"
                 android:textColor="#FFF5E6C8"
-                android:textSize="13sp"
+                android:textSize="13dp"
                 android:textStyle="bold" />
 
             <TextView
@@ -60,7 +61,7 @@
                 android:maxLines="1"
                 android:text="العصر بعد"
                 android:textColor="#FFE3C35A"
-                android:textSize="11sp"
+                android:textSize="11dp"
                 android:textStyle="bold" />
 
             <Chronometer
@@ -70,7 +71,7 @@
                 android:layout_marginStart="4dp"
                 android:layoutDirection="ltr"
                 android:textColor="#FFF5E6C8"
-                android:textSize="14sp"
+                android:textSize="14dp"
                 android:textStyle="bold" />
         </LinearLayout>
 

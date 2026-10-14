@@ -304,7 +304,8 @@ fun WidgetSettingsScreen(onBack: () -> Unit) {
             kinds.forEach { kind ->
                 SectionCard(kind.title) {
                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        WidgetPreview(kind, s.widgetThemeDefault, opacity.toInt(), snapshot, fmt)
+                        // The committed value: re-rendering every preview on each slider step would stutter.
+                        WidgetPreview(kind, s.widgetThemeDefault, s.widgetOpacityDefault, snapshot, fmt)
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(kind.description, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                             Button(onClick = { requestPin(context, kind) }) { Text("إضافة") }

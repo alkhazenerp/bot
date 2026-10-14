@@ -148,8 +148,9 @@ object AndalusArt {
         for (dir in intArrayOf(-1, 1)) {
             val start = cx + dir * 6 * d
             val end = cx + dir * half
-            val paint = stroke(color, 1 * d).apply {
-                shader = LinearGradient(start, y, end, y, color, Color.TRANSPARENT, Shader.TileMode.CLAMP)
+            // Opaque paint: the shader alone carries the colour's alpha (a Paint's alpha multiplies it).
+            val paint = stroke(Color.BLACK, 1 * d).apply {
+                shader = LinearGradient(cx, y, end, y, color, Color.TRANSPARENT, Shader.TileMode.CLAMP)
             }
             canvas.drawLine(start, y, end, y, paint)
         }
@@ -174,13 +175,16 @@ object AndalusArt {
 
     // ------------------------------------------------------------------------------ layers
 
+    /** How far the mihrab's apex rises above its shoulders, in the units of [w] and [h]. */
+    fun mihrabArchHeight(w: Float, h: Float): Float = min(w * 0.42f, h * 0.40f)
+
     /** Arch-shaped widget: girih inside, double gold frame, keystone star and a divider. */
     fun mihrab(w: Int, h: Int, d: Float, theme: WidgetTheme, opacity: Float): Bitmap {
         val bmp = bitmap(w, h)
         val canvas = Canvas(bmp)
         val fw = bmp.width.toFloat()
         val fh = bmp.height.toFloat()
-        val s = min(fw * 0.42f, fh * 0.40f)
+        val s = mihrabArchHeight(fw, fh)
         val r = 20 * d
         val outer = Path().also { arch(it, 0f, 0f, fw, fh, s, r) }
         canvas.drawPath(outer, verticalFill(theme, opacity, fh))

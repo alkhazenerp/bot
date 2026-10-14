@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
+  Header texts use dp so the fixed header height holds at any font scale.
   Alhambra arcade: today's times under horseshoe arches. The arches are a bitmap
   (AndalusArt.arcade) drawn for the frame below the header, so the 10dp padding and the
   36dp header must match ARCADE_* in Widgets.kt.
@@ -55,7 +56,7 @@
                     android:maxLines="1"
                     android:text="دمشق"
                     android:textColor="#FFF5E6C8"
-                    android:textSize="15sp"
+                    android:textSize="15dp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -66,7 +67,7 @@
                     android:maxLines="1"
                     android:text="الأربعاء • 22 ربيع الآخر 1448 هـ"
                     android:textColor="#FFA8DCD4"
-                    android:textSize="10sp" />
+                    android:textSize="10dp" />
             </LinearLayout>
 
             <LinearLayout
@@ -82,7 +83,7 @@
                     android:maxLines="1"
                     android:text="العصر بعد"
                     android:textColor="#FFE3C35A"
-                    android:textSize="11sp"
+                    android:textSize="11dp"
                     android:textStyle="bold" />
 
                 <Chronometer
@@ -91,7 +92,7 @@
                     android:layout_height="wrap_content"
                     android:layoutDirection="ltr"
                     android:textColor="#FFF5E6C8"
-                    android:textSize="16sp"
+                    android:textSize="16dp"
                     android:textStyle="bold" />
             </LinearLayout>
         </LinearLayout>

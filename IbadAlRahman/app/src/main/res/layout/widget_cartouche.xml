@@ -39,6 +39,7 @@
                     android:id="@+id/w_name"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:ellipsize="end"
                     android:maxLines="1"
                     android:text="العصر"
                     android:textColor="#FFF5E6C8"
@@ -50,6 +51,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
+                    android:ellipsize="end"
                     android:maxLines="1"
                     android:text="3:21 م"
                     android:textColor="#FFE3C35A"
@@ -77,6 +79,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="6dp"
+                    android:maxLines="1"
                     android:layoutDirection="ltr"
                     android:textColor="#FFF5E6C8"
                     android:textSize="16sp"
@@ -85,6 +88,7 @@
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/w_dates"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
