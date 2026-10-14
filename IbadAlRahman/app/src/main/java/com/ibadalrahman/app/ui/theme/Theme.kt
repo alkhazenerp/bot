@@ -3,6 +3,7 @@ package com.ibadalrahman.app.ui.theme
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
@@ -187,6 +188,12 @@ fun IbadTheme(mode: ThemeMode, content: @Composable () -> Unit) {
                 WindowCompat.getInsetsController(window, view).apply {
                     isAppearanceLightStatusBars = !dark
                     isAppearanceLightNavigationBars = !dark
+                }
+                // Before Android 10 the navigation bar keeps the scrim chosen from the system
+                // theme; match it to the app theme so the buttons stay visible.
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                    @Suppress("DEPRECATION")
+                    window.navigationBarColor = if (dark) 0x801B1B1B.toInt() else 0xE6FFFFFF.toInt()
                 }
             }
         }

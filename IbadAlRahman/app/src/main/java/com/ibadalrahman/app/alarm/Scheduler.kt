@@ -12,12 +12,20 @@ import com.ibadalrahman.app.data.PrayerRepository
 import com.ibadalrahman.app.data.Settings
 import java.time.DayOfWeek
 import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 
 enum class EventType { ADHAN, REMINDER, IQAMA, SILENT_START, SILENT_END, KAHF, REFRESH }
 
-data class PrayerEvent(val time: Long, val type: EventType, val prayer: Prayer? = null, val prayerTime: Long = time)
+/** [day] is the date whose prayer times produced the event (Isha can fall after midnight). */
+data class PrayerEvent(
+    val time: Long,
+    val type: EventType,
+    val prayer: Prayer? = null,
+    val prayerTime: Long = time,
+    val day: LocalDate? = null,
+)
 
 /**
  * Keeps exactly one alarm armed: the earliest upcoming event. When it fires, every event due
@@ -46,21 +54,21 @@ object Scheduler {
             for (prayer in Prayer.entries) {
                 val t = times[prayer]
                 out += PrayerEvent(t, EventType.REFRESH, prayer)
-                if (s.alertMode(prayer) != AlertMode.SILENT) out += PrayerEvent(t, EventType.ADHAN, prayer)
+                if (s.alertMode(prayer) != AlertMode.SILENT) out += PrayerEvent(t, EventType.ADHAN, prayer, day = date)
                 if (s.reminderEnabled && s.reminderFor(prayer) && s.reminderMinutes > 0) {
-                    out += PrayerEvent(t - s.reminderMinutes * 60_000L, EventType.REMINDER, prayer, t)
+                    out += PrayerEvent(t - s.reminderMinutes * 60_000L, EventType.REMINDER, prayer, t, date)
                 }
                 if (prayer.isSalah && s.iqamaEnabled) {
-                    out += PrayerEvent(t + s.iqamaMinutes(prayer) * 60_000L, EventType.IQAMA, prayer, t)
+                    out += PrayerEvent(t + s.iqamaMinutes(prayer) * 60_000L, EventType.IQAMA, prayer, t, date)
                 }
                 if (prayer.isSalah && s.silentEnabled) {
                     val start = t + s.silentDelayMinutes * 60_000L
-                    out += PrayerEvent(start, EventType.SILENT_START, prayer, t)
-                    out += PrayerEvent(start + s.silentDurationMinutes * 60_000L, EventType.SILENT_END, prayer, t)
+                    out += PrayerEvent(start, EventType.SILENT_START, prayer, t, date)
+                    out += PrayerEvent(start + s.silentDurationMinutes * 60_000L, EventType.SILENT_END, prayer, t, date)
                 }
             }
             if (s.kahfReminder && date.dayOfWeek == DayOfWeek.FRIDAY) {
-                out += PrayerEvent(date.atTime(LocalTime.of(9, 0)).atZone(zone).toInstant().toEpochMilli(), EventType.KAHF)
+                out += PrayerEvent(date.atTime(LocalTime.of(9, 0)).atZone(zone).toInstant().toEpochMilli(), EventType.KAHF, day = date)
             }
             // New day: refresh widgets and the Hijri date.
             out += PrayerEvent(date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli(), EventType.REFRESH)
@@ -123,10 +131,14 @@ object Scheduler {
         }
     }
 
-    /** Identity of one occurrence (type, prayer, local date); null for idempotent events. */
+    /**
+     * Identity of one occurrence (type, prayer, calculation day); null for idempotent events.
+     * The day is the one the times were computed for, not the date of the timestamp: an Isha
+     * just after midnight and the next evening's Isha fall on the same date but are distinct.
+     */
     fun eventKey(event: PrayerEvent, zone: ZoneId): String? = when (event.type) {
         EventType.REFRESH, EventType.SILENT_END -> null
-        else -> "${event.type}:${event.prayer?.name.orEmpty()}:${Instant.ofEpochMilli(event.prayerTime).atZone(zone).toLocalDate()}"
+        else -> "${event.type}:${event.prayer?.name.orEmpty()}:${event.day ?: Instant.ofEpochMilli(event.prayerTime).atZone(zone).toLocalDate()}"
     }
 
     fun markHandled(context: Context, events: List<PrayerEvent>, now: Long) {

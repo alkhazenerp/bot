@@ -3,7 +3,11 @@ package com.ibadalrahman.app.alarm
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.app.NotificationManager
 import android.media.AudioManager
+import android.os.Build
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.util.Log
 import com.ibadalrahman.app.Refresher
 import com.ibadalrahman.app.core.Prayer
@@ -85,6 +89,10 @@ object SilentMode {
         }
         val am = context.getSystemService(AudioManager::class.java) ?: return
         if (am.ringerMode != AudioManager.RINGER_MODE_NORMAL) return // the user already silenced the phone
+        // Without a vibrator Android turns VIBRATE into SILENT, and going back from SILENT needs
+        // Do Not Disturb access: we could not give the ringer back, so leave it alone.
+        val nm = context.getSystemService(NotificationManager::class.java)
+        if (!hasVibrator(context) && nm?.isNotificationPolicyAccessGranted != true) return
         try {
             am.ringerMode = AudioManager.RINGER_MODE_VIBRATE
             s.savedRingerMode = AudioManager.RINGER_MODE_NORMAL
@@ -94,6 +102,16 @@ object SilentMode {
         } catch (e: SecurityException) {
             Log.w("SilentMode", "Ringer mode change not permitted", e)
         }
+    }
+
+    private fun hasVibrator(context: Context): Boolean {
+        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            context.getSystemService(VibratorManager::class.java)?.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            context.getSystemService(Vibrator::class.java)
+        }
+        return vibrator?.hasVibrator() == true
     }
 
     /**

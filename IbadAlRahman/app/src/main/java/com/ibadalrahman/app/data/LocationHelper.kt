@@ -91,8 +91,13 @@ object LocationHelper {
             val name = address?.let { it.locality ?: it.subAdminArea ?: it.adminArea }
                 ?: nearest?.name
                 ?: "%.3f, %.3f".format(Locale.US, lat, lng)
-            // Country from the geocoder, else from the closest known city within a few hundred km.
-            val country = address?.countryCode ?: Cities.nearest(lat, lng, maxKm = 400.0)?.countryCode
+            // Country from the geocoder, else from the closest known city within a few hundred km,
+            // else the previous one, but only if we have not moved far from where it applied.
+            val moved = FloatArray(1)
+            Location.distanceBetween(settings.latitude, settings.longitude, lat, lng, moved)
+            val country = address?.countryCode
+                ?: Cities.nearest(lat, lng, maxKm = 400.0)?.countryCode
+                ?: settings.countryCode.takeIf { it.isNotEmpty() && moved[0] <= 400_000f }
             settings.latitude = lat
             settings.longitude = lng
             settings.locationName = name
@@ -100,10 +105,8 @@ object LocationHelper {
             settings.zoneId = ""
             // The fix's own time, so a stale last-known position does not block the next refresh.
             settings.locationUpdatedAt = minOf(System.currentTimeMillis(), location.time)
-            if (country != null) {
-                settings.countryCode = country
-                if (settings.methodAuto) settings.method = CalculationMethod.forCountry(country)
-            }
+            settings.countryCode = country.orEmpty()
+            if (settings.methodAuto) settings.method = CalculationMethod.forCountry(country)
             onResult(LocationResult.Success(name, country))
         }
     }
